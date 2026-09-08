@@ -122,12 +122,54 @@ input:focus{border-color:var(--cal)}
 .res small{color:var(--dim); font-size:.76rem}
 .totalpv{display:flex; gap:14px; padding:13px; background:var(--panel2); border-radius:14px; margin:4px 0 14px; font-size:.85rem; color:var(--dim)}
 .totalpv b{display:block; color:var(--text); font-size:1.2rem; font-weight:600}
+
+/* ---- progress dashboard ---- */
+.card{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:12px}
+.card h3{font-size:.95rem; margin-bottom:2px}
+.card .sub{color:var(--dim); font-size:.78rem; margin-bottom:14px}
+.segwrap{display:flex; gap:6px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:4px; margin:14px 0 12px}
+.segwrap button{flex:1; padding:9px 0; border-radius:10px; font-size:.85rem; color:var(--dim)}
+.segwrap button.on{background:var(--panel2); color:var(--text)}
+.hero2{display:flex; gap:16px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:16px; margin-bottom:12px}
+#sprite{width:128px; height:96px; image-rendering:pixelated; image-rendering:crisp-edges; flex:none; background:radial-gradient(ellipse at 50% 70%, rgba(226,116,140,.16), transparent 70%)}
+.lvl{flex:1; min-width:0}
+.lvl b{display:block; font-size:1.15rem; font-weight:600}
+.lvl .rank{color:var(--cal); font-size:.8rem; font-weight:500; letter-spacing:.04em; text-transform:uppercase}
+.lvl .xpbar{height:8px; border-radius:5px; background:#0D1319; margin:9px 0 5px; overflow:hidden}
+.lvl .xpbar > i{display:block; height:100%; background:var(--cal); transition:width .4s ease}
+.lvl small{color:var(--dim); font-size:.75rem}
+.stats{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:12px}
+.stat{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:13px 14px}
+.stat b{display:block; color:var(--dim); font-size:.72rem; font-weight:500; text-transform:uppercase; letter-spacing:.04em}
+.stat .v{font-size:1.7rem; font-weight:600; line-height:1.15; margin-top:3px}
+.stat .note2{color:var(--dim); font-size:.74rem; margin-top:2px}
+.good{color:var(--pro)} .warn{color:var(--cal)} .bad{color:var(--fat)} .neutral{color:var(--text)}
+.chart{width:100%; display:block; overflow:visible}
+.chart .grid{stroke:var(--line); stroke-width:1}
+.chart .axis{fill:var(--dim); font-size:10px; font-family:inherit}
+.chart .lbl{fill:var(--text); font-size:10px; font-weight:600; font-family:inherit}
+.hm{display:grid; grid-template-columns:repeat(7,1fr); gap:4px}
+.hm i{aspect-ratio:1; border-radius:4px; display:block; border:1px solid rgba(255,255,255,.04)}
+.hmhead{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px}
+.hmhead span{text-align:center; color:var(--dim); font-size:.65rem; text-transform:uppercase}
+.key{display:flex; align-items:center; gap:7px; margin-top:12px; color:var(--dim); font-size:.72rem; flex-wrap:wrap}
+.key i{width:12px; height:12px; border-radius:3px; display:inline-block}
+.rowline{display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-bottom:1px solid var(--line); font-size:.86rem}
+.rowline:last-child{border-bottom:0}
+.rowline span{color:var(--dim)}
+.rowline b{font-weight:600}
+.tip{position:fixed; z-index:60; background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:7px 10px; font-size:.76rem; pointer-events:none; opacity:0; transition:opacity .12s; white-space:nowrap; box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.tip.on{opacity:1}
+.tip b{display:block; font-weight:600}
+.updbar{position:fixed; left:12px; right:12px; bottom:calc(86px + env(safe-area-inset-bottom)); z-index:30; background:var(--cal); color:#1A1206; border-radius:13px; padding:12px 14px; display:none; align-items:center; gap:10px; font-size:.85rem; font-weight:500; box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.updbar.on{display:flex}
+.updbar button{margin-left:auto; background:#1A1206; color:var(--cal); padding:7px 13px; border-radius:9px; font-weight:600; font-size:.8rem}
 .hide{display:none !important}
 </style>
 </head>
 <body>
 
-<header>
+<header id="dateHdr">
   <div class="wrap datebar">
     <button class="stepbtn" id="prevDay" aria-label="Previous day">&#8249;</button>
     <h1 id="dayTitle">Today<span id="daySub"></span></h1>
@@ -173,6 +215,16 @@ input:focus{border-color:var(--cal)}
   </div>
   <button class="primary" id="saveGoals">Save targets</button>
 
+
+  <h3 style="margin:28px 0 4px">Weight plan</h3>
+  <p class="note" id="pDerived"></p>
+  <div class="row4">
+    <label class="fld"><span>Current weight (lb)</span><input type="number" id="pStart" inputmode="decimal" step="any"></label>
+    <label class="fld"><span>Goal weight (lb)</span><input type="number" id="pGoal" inputmode="decimal" step="any"></label>
+    <label class="fld"><span>Loss per week (lb)</span><input type="number" id="pRate" inputmode="decimal" step="0.25"></label>
+    <label class="fld"><span>Daily burn (optional)</span><input type="number" id="pTdee" inputmode="numeric" placeholder="auto"></label>
+  </div>
+  <button class="primary" id="saveProfile">Save weight plan</button>
   <h3 style="margin:28px 0 4px">Your data</h3>
   <p class="note">Everything is stored on this device only. Export a backup before clearing your browser or switching phones.</p>
   <button class="ghost" id="exportBtn">Export backup file</button>
@@ -182,9 +234,33 @@ input:focus{border-color:var(--cal)}
   <p class="note" id="storageWarn"></p>
 </main>
 
+
+<main class="wrap hide" id="viewProgress">
+  <div class="segwrap">
+    <button id="segWeek" class="on">This week</button>
+    <button id="segMonth">This month</button>
+  </div>
+  <div class="hero2">
+    <canvas id="sprite" width="24" height="18" aria-label="Your warrior"></canvas>
+    <div class="lvl">
+      <span class="rank" id="rankName">Initiate</span>
+      <b id="lvlNum">Level 1</b>
+      <div class="xpbar"><i id="xpBar" style="width:0%"></i></div>
+      <small id="xpTxt">0 XP</small>
+    </div>
+  </div>
+  <div class="stats" id="statGrid"></div>
+  <div class="card" id="cardCals"></div>
+  <div class="card" id="cardWeight"></div>
+  <div class="card" id="cardBreak"></div>
+</main>
+
+<div class="updbar" id="updBar"><span>A newer version is available.</span><button id="updGo">Update</button></div>
+
 <nav><div class="wrap">
   <button data-tab="today" class="on"><svg viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-6M22 19H2"/></svg>Today</button>
   <button data-tab="add"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add</button>
+  <button data-tab="progress"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 5-8"/><circle cx="17" cy="6" r="1.6"/></svg>Progress</button>
   <button data-tab="foods"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 4v16M12 8h5M12 12h5"/></svg>Foods</button>
   <button data-tab="goals"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>Targets</button>
 </div></nav>
@@ -206,11 +282,79 @@ const store={
   set(v){ const s=JSON.stringify(v); if(storageOK){ try{ localStorage.setItem(KEY,s); }catch(e){ storageOK=false; mem[KEY]=s; } } else mem[KEY]=s; }
 };
 
-const DEF={goals:{cal:2200,p:180,c:200,f:65}, days:{}, library:[]};
+const DEF={
+  goals:{cal:2200,p:180,c:200,f:65},
+  days:{}, library:{}, weights:{},
+  profile:{startW:0, goalW:0, rate:1.75, tdee:0}
+};
+DEF.library=[];
 let S=Object.assign({},DEF,store.get()||{});
 S.goals=Object.assign({},DEF.goals,S.goals||{});
-S.days=S.days||{}; S.library=S.library||[];
-const save=()=>store.set(S);
+S.profile=Object.assign({},DEF.profile,S.profile||{});
+S.days=S.days||{}; S.library=S.library||[]; S.weights=S.weights||{};
+
+/* Storage hardening. localStorage stays the primary store, but a mirror in
+   IndexedDB means clearing one of them does not lose everything, and the app
+   can restore itself on next open. */
+let idb=null;
+function idbOpen(){
+  return new Promise(res=>{
+    try{
+      const rq=indexedDB.open('macrotracker',1);
+      rq.onupgradeneeded=()=>{ rq.result.createObjectStore('kv'); };
+      rq.onsuccess=()=>res(rq.result);
+      rq.onerror=()=>res(null);
+    }catch(e){ res(null); }
+  });
+}
+function idbPut(v){
+  if(!idb) return;
+  try{ idb.transaction('kv','readwrite').objectStore('kv').put(v,'state'); }catch(e){}
+}
+function idbGet(){
+  return new Promise(res=>{
+    if(!idb) return res(null);
+    try{
+      const rq=idb.transaction('kv','readonly').objectStore('kv').get('state');
+      rq.onsuccess=()=>res(rq.result||null);
+      rq.onerror=()=>res(null);
+    }catch(e){ res(null); }
+  });
+}
+const save=()=>{ store.set(S); idbPut(S); };
+
+/* If localStorage came back empty but the mirror has data, restore from it. */
+async function bootRestore(){
+  idb=await idbOpen();
+  const had = S.library.length || Object.keys(S.days).some(k=>(S.days[k]||[]).length) || Object.keys(S.weights).length;
+  const backup=await idbGet();
+  if(!had && backup && (backup.library||backup.days)){
+    S=Object.assign({},DEF,backup);
+    S.goals=Object.assign({},DEF.goals,backup.goals||{});
+    S.profile=Object.assign({},DEF.profile,backup.profile||{});
+    S.days=S.days||{}; S.library=S.library||[]; S.weights=S.weights||{};
+    store.set(S);
+    render();
+    const el=$('#storageWarn');
+    if(el) el.textContent='Your data was restored from the on-device backup copy.';
+  } else {
+    idbPut(S);
+  }
+}
+
+/* Self-update. Without this the only way to get a new build was a hard refresh
+   or re-adding the home screen icon, and on iOS both of those wipe local storage. */
+const APP_VERSION='2026-09-08.5';
+let updSeen=false;
+async function checkUpdate(){
+  if(updSeen) return;
+  try{
+    const r=await fetch(location.pathname+'?cb='+Date.now(),{cache:'no-store'});
+    const t=await r.text();
+    const m=t.match(/APP_VERSION='([^']+)'/);
+    if(m && m[1]!==APP_VERSION){ updSeen=true; const b=$('#updBar'); if(b) b.classList.add('on'); }
+  }catch(e){}
+}
 
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s);
@@ -284,7 +428,10 @@ $$('nav button').forEach(b=>b.onclick=()=>{
   $('#viewToday').classList.toggle('hide',tab!=='today');
   $('#viewFoods').classList.toggle('hide',tab!=='foods');
   $('#viewGoals').classList.toggle('hide',tab!=='goals');
+  $('#viewProgress').classList.toggle('hide',tab!=='progress');
+  $('#dateHdr').classList.toggle('hide',tab!=='today');
   if(tab==='foods') renderLib();
+  if(tab==='progress') renderProgress();
 });
 
 /* ---------- sheet plumbing ---------- */
@@ -786,6 +933,303 @@ ml.href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'applicati
 document.head.appendChild(ml);
 
 render();
+
+/* ================= progress dashboard ================= */
+const DAYMS=864e5;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const keyBack=n=>iso(new Date(Date.now()-n*DAYMS));
+function rangeKeys(n){ const o=[]; for(let i=n-1;i>=0;i--) o.push(keyBack(i)); return o; }
+function dayTotals(k){ return (S.days[k]||[]).reduce((a,e)=>({cal:a.cal+e.cal,p:a.p+e.p,c:a.c+e.c,f:a.f+e.f}),{cal:0,p:0,c:0,f:0}); }
+
+/* A day is scored only on what the app actually knows: calories against target,
+   protein against target, and how close carbs and fat land to theirs. */
+function dayScore(k){
+  const t=dayTotals(k), g=S.goals;
+  const logged=(S.days[k]||[]).length>0 && t.cal>=300;
+  if(!logged) return {logged:false,total:0,calS:0,proS:0,balS:0,t};
+  const rc=g.cal? t.cal/g.cal : 1;
+  let calS;
+  if(rc<=1.05 && rc>=0.90) calS=100;
+  else if(rc>1.05) calS=clamp(100-(rc-1.05)*400,0,100);
+  else calS=clamp(100-(0.90-rc)*260,0,100);
+  const proS=g.p? clamp(t.p/g.p*100,0,100) : 0;
+  const near=(v,tg)=> tg? clamp(100-Math.abs(v-tg)/tg*140,0,100) : 0;
+  const balS=(near(t.c,g.c)+near(t.f,g.f))/2;
+  return {logged:true,total:Math.round(0.45*calS+0.35*proS+0.20*balS),
+          calS:Math.round(calS),proS:Math.round(proS),balS:Math.round(balS),t};
+}
+const isClean=s=>s.logged&&s.total>=70;
+function tdee(){ return S.profile.tdee>0 ? S.profile.tdee : S.goals.cal+Math.round(S.profile.rate*3500/7); }
+function dayDeficit(k){ const s=dayScore(k); return s.logged? tdee()-s.t.cal : 0; }
+
+/* ---- levels ---- */
+const LEVELS=[0,40,100,180,280,400,550,730,950,1200];
+const RANKS=['Initiate','Acolyte','Warden','Vanguard','Templar','Zealot','Champion','Ascendant','Harbinger','Seraph'];
+function xpTotal(){
+  let xp=0,streak=0;
+  for(const k of Object.keys(S.days).sort()){
+    const s=dayScore(k);
+    if(s.logged){ xp+=Math.round(s.total/10); if(isClean(s)){ streak++; if(streak>2) xp+=2; } else streak=0; }
+    else streak=0;
+    if(S.weights[k]) xp+=2;
+  }
+  return xp;
+}
+function levelInfo(){
+  const xp=xpTotal(); let l=1;
+  for(let i=0;i<LEVELS.length;i++) if(xp>=LEVELS[i]) l=i+1;
+  const cur=LEVELS[l-1], next=LEVELS[l];
+  return {xp,level:l,rank:RANKS[l-1],cur,next,pct: next? clamp((xp-cur)/(next-cur)*100,0,100):100};
+}
+function currentStreak(){
+  let n=0;
+  for(let i=0;i<400;i++){
+    const k=keyBack(i), s=dayScore(k);
+    if(i===0 && !s.logged) continue;      // today may simply not be finished yet
+    if(isClean(s)) n++; else break;
+  }
+  return n;
+}
+
+/* ---- the warrior: original pixel sprite, gains gear as the level climbs ---- */
+const SPAL={k:'#0C1116',R:'#8E2740',s:'#151D27',g:'#F5C542',c:'#2C3A47',
+            m:'#7C8EA0',M:'#C9D6E2',w:'#B33A2E',W:'#E24B3A'};
+const SPRITES=[
+[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk.........','........kRRRRRRk........','........kRssssRk........','........kRgssgRk........','........kRssssRk........','........kRRRRRRk........','.......kRRRRRRRRk.......','.......kRRRRRRRRk.......','......kRRRRRRRRRRk......','......kRRRRRRRRRRk......','......kRRRRRRRRRRk......','.....kRRRRRRRRRRRRk.....','.....kRRRRRRRRRRRRk.....','.....kkkkkkkkkkkkkk.....','........................' ],
+[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk.........','........kRRRRRRk........','........kRssssRk........','........kRgssgRk........','........kRssssRk........','........kRRRRRRk........','.......kcRRRRRRck.......','.......kcRRRRRRck.......','......kcRRRRRRRRck......','......kcRRRRRRRRck......','......kcRRRRRRRRck......','.....kcRRRRRRRRRRck.....','.....kcRRRRRRRRRRck.....','.....kkkkkkkkkkkkkk.....','........................' ],
+[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk.........','........kRRRRRRk........','........kRssssRk........','........kRgssgRk........','........kRssssRk........','........kRRRRRRk........','.......kMRRRRRRMk.......','.......kcRRRRRRck.......','......kcRRRRRRRRck......','......kcmmmmmmmmck......','......kcRRRRRRRRck......','.....kcRRRRRRRRRRck.....','.....kcRRRRRRRRRRck.....','.....kkkkkkkkkkkkkk.....','........................' ],
+[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk....M....','........kRRRRRRk...m....','........kRssssRk...m....','........kRgssgRk...m....','........kRssssRk...m....','........kRRRRRRk...m....','.......kMRRRRRRMk..m....','.......kcRRRRRRckmmm....','......kcRRRRRRRRck.m....','......kcmmmmmmmmck.m....','......kcRRRRRRRRck.m....','.....kcRRRRRRRRRRckm....','.....kcRRRRRRRRRRckm....','.....kkkkkkkkkkkkkkm....','........................' ],
+[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk.........','....WWW.kRRRRRRk.WWW....','...WWWWWkRssssRkWWWWW...','..wwwwwwkRgssgRkwwwwww..','.wwwwwwwkRssssRkwwwwwww.','.wwwwwwwkRRRRRRkwwwwwww.','..wwwwwkMRRRRRRMkwwwww..','...wwwwkcRRRRRRckwwww...','....wwkcRRRRRRRRckww....','......kcmmmmmmmmck......','......kcRRRRRRRRck......','.....kcRRRRRRRRRRck.....','.....kcRRRRRRRRRRck.....','.....kkkkkkkkkkkkkk.....','........................' ]
+];
+function drawSprite(){
+  const cv=$('#sprite'); if(!cv) return;
+  const tier=clamp(Math.floor((levelInfo().level-1)/2),0,4);
+  const grid=SPRITES[tier], ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,24,18);
+  for(let y=0;y<grid.length;y++){
+    const row=grid[y];
+    for(let x=0;x<row.length;x++){
+      const ch=row[x];
+      if(ch==='.'||ch==='x') continue;
+      ctx.fillStyle=SPAL[ch]||'#fff';
+      ctx.fillRect(x,y,1,1);
+    }
+  }
+}
+
+/* ---- tooltip shared by every chart ---- */
+let tipEl=null, tipT=null;
+function showTip(x,y,html){
+  if(!tipEl){ tipEl=document.createElement('div'); tipEl.className='tip'; document.body.appendChild(tipEl); }
+  tipEl.innerHTML=html; tipEl.classList.add('on');
+  const w=tipEl.offsetWidth||120;
+  tipEl.style.left=clamp(x-w/2,8,innerWidth-w-8)+'px';
+  tipEl.style.top=Math.max(8,y-46)+'px';
+  clearTimeout(tipT); tipT=setTimeout(()=>tipEl.classList.remove('on'),2600);
+}
+const dayLetter=k=>['S','M','T','W','T','F','S'][new Date(k+'T12:00').getDay()];
+const shortDate=k=>new Date(k+'T12:00').toLocaleDateString(undefined,{month:'short',day:'numeric'});
+
+/* ---- calories vs target, one bar per day ---- */
+function calBars(keys){
+  const g=S.goals, VB=320, H=142, padT=16, padB=20;
+  const vals=keys.map(k=>dayTotals(k).cal);
+  const maxV=Math.max(g.cal*1.2, Math.max.apply(null,vals.concat([1])));
+  const plotH=H-padT-padB, bw=VB/keys.length, iw=Math.max(6,Math.min(28,bw-8));
+  let bars='',labels='';
+  keys.forEach((k,i)=>{
+    const t=dayTotals(k), s=dayScore(k);
+    const x=i*bw+(bw-iw)/2;
+    const hgt=(t.cal/maxV)*plotH, y=padT+plotH-hgt;
+    const col=!s.logged?'var(--line)':(t.cal>g.cal*1.05?'var(--fat)':'var(--pro)');
+    bars+='<rect class="bar" data-k="'+k+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+iw.toFixed(1)+
+          '" height="'+Math.max(hgt,2).toFixed(1)+'" rx="4" fill="'+col+'"/>';
+    if(keys.length<=7) labels+='<text class="axis" x="'+(x+iw/2).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+dayLetter(k)+'</text>';
+  });
+  const ty=padT+plotH-(g.cal/maxV)*plotH;
+  return '<svg class="chart" viewBox="0 0 '+VB+' '+H+'" role="img" aria-label="Calories per day against target">'+
+    '<line class="grid" x1="0" y1="'+ty.toFixed(1)+'" x2="'+VB+'" y2="'+ty.toFixed(1)+'" stroke-dasharray="4 4"/>'+
+
+    bars+labels+'</svg>';
+}
+
+/* ---- weight over time ---- */
+function weightChart(days){
+  const cutoff=keyBack(days-1);
+  const pts=Object.keys(S.weights).sort().filter(k=>k>=cutoff).map(k=>({k,w:+S.weights[k]}));
+  if(pts.length<2) return '<p class="note">Log your weight on at least two days and the trend line shows up here.</p>';
+  const VB=320,H=140,padT=14,padB=18,padL=30;
+  const ws=pts.map(p=>p.w).concat(S.profile.goalW>0?[S.profile.goalW]:[]);
+  let lo=Math.min.apply(null,ws), hi=Math.max.apply(null,ws);
+  if(hi-lo<2){ lo-=1; hi+=1; }
+  const pad=(hi-lo)*0.15; lo-=pad; hi+=pad;
+  const plotH=H-padT-padB, plotW=VB-padL-6;
+  const X=i=>padL+(pts.length===1?plotW/2:(i/(pts.length-1))*plotW);
+  const Y=w=>padT+plotH-((w-lo)/(hi-lo))*plotH;
+  let d='',dots='';
+  pts.forEach((p,i)=>{ d+=(i?' L':'M')+X(i).toFixed(1)+' '+Y(p.w).toFixed(1);
+    dots+='<circle class="wdot" data-k="'+p.k+'" cx="'+X(i).toFixed(1)+'" cy="'+Y(p.w).toFixed(1)+'" r="4.5" fill="var(--carb)" stroke="var(--panel)" stroke-width="2"/>'; });
+  let goal='';
+  if(S.profile.goalW>0 && S.profile.goalW>=lo && S.profile.goalW<=hi){
+    const gy=Y(S.profile.goalW);
+    goal='<line class="grid" x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+VB+'" y2="'+gy.toFixed(1)+'" stroke-dasharray="4 4"/>'+
+         '<text class="axis" x="'+VB+'" y="'+(gy-5).toFixed(1)+'" text-anchor="end">goal '+r1(S.profile.goalW)+'</text>';
+  }
+  return '<svg class="chart" viewBox="0 0 '+VB+' '+H+'" role="img" aria-label="Weight over time">'+
+    '<text class="axis" x="0" y="'+(padT+4)+'">'+r1(hi)+'</text>'+
+    '<text class="axis" x="0" y="'+(padT+plotH)+'">'+r1(lo)+'</text>'+goal+
+    '<path d="'+d+'" fill="none" stroke="var(--carb)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
+    dots+
+    '<text class="axis" x="'+padL+'" y="'+(H-4)+'">'+shortDate(pts[0].k)+'</text>'+
+    '<text class="axis" x="'+VB+'" y="'+(H-4)+'" text-anchor="end">'+shortDate(pts[pts.length-1].k)+'</text>'+
+    '</svg>';
+}
+
+/* ---- month heatmap, one hue getting lighter as the day scores better ---- */
+const HEAT=['#1E2733','#1F4A3C','#2A6B54','#388F6E','#4AB68B','#5AD1A5'];
+const heatColor=s=>s<=0?HEAT[0]:HEAT[Math.min(5,1+Math.floor(s/21))];
+function heatmap(keys){
+  let cells='';
+  keys.forEach(k=>{
+    const s=dayScore(k);
+    cells+='<i class="hcell" data-k="'+k+'" style="background:'+heatColor(s.logged?s.total:0)+'"></i>';
+  });
+  const head=['S','M','T','W','T','F','S'].map(d=>'<span>'+d+'</span>').join('');
+  let key='<div class="key"><span>Lower</span>';
+  HEAT.forEach(c=>{ key+='<i style="background:'+c+'"></i>'; });
+  key+='<span>Higher day score</span></div>';
+  return '<div class="hmhead">'+head+'</div><div class="hm">'+cells+'</div>'+key;
+}
+
+/* ---- the dashboard itself ---- */
+let progMode='week';
+function alignedMonthKeys(){
+  // pad back to the Sunday of the earliest week so columns line up with weekdays
+  const start=new Date(keyBack(27)+'T12:00');
+  start.setDate(start.getDate()-start.getDay());
+  const out=[], today=iso(new Date());
+  for(let i=0;i<35;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const k=iso(d);
+    if(k>today) break;
+    out.push(k);
+  }
+  return out;
+}
+function renderProgress(){
+  const n=progMode==='week'?7:28;
+  const keys=rangeKeys(n);
+  const li=levelInfo();
+  $('#rankName').textContent=li.rank;
+  $('#lvlNum').textContent='Level '+li.level;
+  $('#xpBar').style.width=li.pct+'%';
+  $('#xpTxt').textContent = li.next ? (li.xp+' XP  ·  '+(li.next-li.xp)+' to level '+(li.level+1)) : (li.xp+' XP  ·  max rank');
+  drawSprite();
+
+  const scored=keys.map(dayScore);
+  const loggedDays=scored.filter(s=>s.logged).length;
+  const cleanDays=scored.filter(isClean).length;
+  const totalCal=scored.reduce((a,s)=>a+s.t.cal,0);
+  const avgCal=loggedDays?Math.round(totalCal/loggedDays):0;
+  const deficit=keys.reduce((a,k)=>a+dayDeficit(k),0);
+  const projLb=deficit/3500;
+  const streak=currentStreak();
+
+  // measured weight change across the window
+  const inRange=Object.keys(S.weights).sort().filter(k=>k>=keys[0]);
+  const measured = inRange.length>=2 ? (+S.weights[inRange[inRange.length-1]] - +S.weights[inRange[0]]) : null;
+
+  $('#statGrid').innerHTML=
+    stat('Clean days', cleanDays+' / '+n, loggedDays+' days logged', cleanDays>=n*0.7?'good':(cleanDays>=n*0.4?'warn':'bad'))+
+    stat('Streak', streak+(streak===1?' day':' days'), streak>0?'keep it alive':'start one today', streak>=3?'good':'neutral')+
+    stat('Avg calories', loggedDays?r0(avgCal):'--', 'target '+r0(S.goals.cal), !loggedDays?'neutral':(avgCal>S.goals.cal*1.05?'bad':'good'))+
+    stat(deficit>=0?'Deficit':'Surplus', r0(Math.abs(deficit))+' cal',
+         (deficit>=0?'about '+r1(projLb)+' lb of loss':'about '+r1(Math.abs(projLb))+' lb gained'),
+         deficit>=0?'good':'bad');
+
+  $('#cardCals').innerHTML='<h3>Calories vs target</h3><div class="sub">Dashed line is your '+r0(S.goals.cal)+' cal target. Green is at or under it, red is over, grey days were not logged.</div>'+calBars(keys);
+
+  let wbody='<h3>Weight</h3><div class="sub">'+
+    (measured!==null ? (measured<=0?'Down ':'Up ')+r1(Math.abs(measured))+' lb over this period' : 'Log your weight to track the real result against the projection')+
+    '</div>'+weightChart(progMode==='week'?21:60)+
+    '<button class="ghost" id="logW">Log weight</button>';
+  $('#cardWeight').innerHTML=wbody;
+  $('#logW').onclick=logWeightUI;
+
+  let bbody;
+  if(progMode==='week'){
+    bbody='<h3>Day by day</h3><div class="sub">Score blends calories (45%), protein (35%) and how close carbs and fat land (20%).</div>';
+    keys.forEach(k=>{ const s=dayScore(k);
+      bbody+='<div class="rowline"><span>'+shortDate(k)+(k===iso(new Date())?' · today':'')+'</span>'+
+        (s.logged?'<b class="'+(isClean(s)?'good':(s.total>=45?'warn':'bad'))+'">'+s.total+'</b>':'<b style="color:var(--dim)">not logged</b>')+'</div>';
+    });
+  } else {
+    bbody='<h3>The month</h3><div class="sub">Each square is a day. Brighter means a better score.</div>'+heatmap(alignedMonthKeys());
+  }
+  $('#cardBreak').innerHTML=bbody;
+  wireProgTips();
+}
+function stat(label,val,note,cls){
+  return '<div class="stat"><b>'+esc(label)+'</b><div class="v '+cls+'">'+esc(String(val))+'</div><div class="note2">'+esc(note)+'</div></div>';
+}
+function wireProgTips(){
+  $$('#viewProgress .bar').forEach(el=>el.onclick=ev=>{
+    const k=el.dataset.k, s=dayScore(k), r=el.getBoundingClientRect();
+    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+(s.logged?r0(s.t.cal)+' cal · '+r0(s.t.p)+'g protein · score '+s.total:'not logged'));
+  });
+  $$('#viewProgress .wdot').forEach(el=>el.onclick=ev=>{
+    const k=el.dataset.k, r=el.getBoundingClientRect();
+    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+r1(S.weights[k])+' lb');
+  });
+  $$('#viewProgress .hcell').forEach(el=>el.onclick=ev=>{
+    const k=el.dataset.k, s=dayScore(k), r=el.getBoundingClientRect();
+    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+(s.logged?r0(s.t.cal)+' cal · score '+s.total:'not logged'));
+  });
+}
+function logWeightUI(){
+  const today=iso(new Date());
+  openSheet('<h3>Log weight</h3>'+
+    '<label class="fld"><span>Weight (lb)</span><input type="number" id="wv" inputmode="decimal" step="any" value="'+(S.weights[today]||'')+'" placeholder="e.g. 212.4"></label>'+
+    '<label class="fld"><span>Date</span><input type="date" id="wd" value="'+today+'" max="'+today+'"></label>'+
+    '<button class="primary" id="wsave">Save</button><button class="ghost" data-close>Cancel</button>');
+  $('#wv').focus();
+  $('#wsave').onclick=()=>{
+    const v=+$('#wv').value, d=$('#wd').value||today;
+    if(v>0){ S.weights[d]=v; if(!S.profile.startW) S.profile.startW=v; save(); }
+    closeSheet(); renderProgress();
+  };
+}
+
+/* ---- profile (weight goal + burn rate) lives in the Targets tab ---- */
+function fillProfile(){
+  const p=S.profile;
+  $('#pStart').value=p.startW||''; $('#pGoal').value=p.goalW||'';
+  $('#pRate').value=p.rate||1.75;  $('#pTdee').value=p.tdee||'';
+  $('#pDerived').textContent='Daily deficit target '+r0(p.rate*3500/7)+' cal  ·  burn assumed '+r0(tdee())+' cal';
+}
+function saveProfile(){
+  S.profile.startW=+$('#pStart').value||0;
+  S.profile.goalW=+$('#pGoal').value||0;
+  S.profile.rate=clamp(+$('#pRate').value||1.75,0.25,3);
+  S.profile.tdee=+$('#pTdee').value||0;
+  save(); fillProfile(); renderProgress();
+  $('#saveProfile').textContent='Saved'; setTimeout(()=>$('#saveProfile').textContent='Save weight plan',1200);
+}
+
+/* ---- wiring ---- */
+$('#segWeek').onclick=()=>{ progMode='week'; $('#segWeek').classList.add('on'); $('#segMonth').classList.remove('on'); renderProgress(); };
+$('#segMonth').onclick=()=>{ progMode='month'; $('#segMonth').classList.add('on'); $('#segWeek').classList.remove('on'); renderProgress(); };
+$('#updGo').onclick=()=>{ location.replace(location.pathname+'?u='+Date.now()); };
+['pStart','pGoal','pRate','pTdee'].forEach(id=>{ const el=$('#'+id); if(el) el.oninput=()=>{
+  const r=clamp(+$('#pRate').value||1.75,0.25,3);
+  $('#pDerived').textContent='Daily deficit target '+r0(r*3500/7)+' cal  ·  burn assumed '+r0((+$('#pTdee').value||0)>0?+$('#pTdee').value:S.goals.cal+Math.round(r*3500/7))+' cal';
+}; });
+$('#saveProfile').onclick=saveProfile;
+fillProfile();
+bootRestore();
+checkUpdate();
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
+
 </script>
 </body>
 </html>
