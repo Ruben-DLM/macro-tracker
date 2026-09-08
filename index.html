@@ -131,7 +131,7 @@ input:focus{border-color:var(--cal)}
 .segwrap button{flex:1; padding:9px 0; border-radius:10px; font-size:.85rem; color:var(--dim)}
 .segwrap button.on{background:var(--panel2); color:var(--text)}
 .hero2{display:flex; gap:16px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:16px; margin-bottom:12px}
-#sprite{width:128px; height:96px; image-rendering:pixelated; image-rendering:crisp-edges; flex:none; background:radial-gradient(ellipse at 50% 70%, rgba(226,116,140,.16), transparent 70%)}
+#sprite{width:84px; height:126px; image-rendering:pixelated; image-rendering:crisp-edges; flex:none; background:radial-gradient(ellipse at 50% 70%, rgba(226,116,140,.16), transparent 70%)}
 .lvl{flex:1; min-width:0}
 .lvl b{display:block; font-size:1.15rem; font-weight:600}
 .lvl .rank{color:var(--cal); font-size:.8rem; font-weight:500; letter-spacing:.04em; text-transform:uppercase}
@@ -241,9 +241,9 @@ input:focus{border-color:var(--cal)}
     <button id="segMonth">This month</button>
   </div>
   <div class="hero2">
-    <canvas id="sprite" width="24" height="18" aria-label="Your warrior"></canvas>
+    <canvas id="sprite" width="32" height="48" aria-label="Your warrior"></canvas>
     <div class="lvl">
-      <span class="rank" id="rankName">Initiate</span>
+      <span class="rank" id="rankName">Novice</span>
       <b id="lvlNum">Level 1</b>
       <div class="xpbar"><i id="xpBar" style="width:0%"></i></div>
       <small id="xpTxt">0 XP</small>
@@ -344,7 +344,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-09-08.5';
+const APP_VERSION='2026-09-08.7';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -964,7 +964,7 @@ function dayDeficit(k){ const s=dayScore(k); return s.logged? tdee()-s.t.cal : 0
 
 /* ---- levels ---- */
 const LEVELS=[0,40,100,180,280,400,550,730,950,1200];
-const RANKS=['Initiate','Acolyte','Warden','Vanguard','Templar','Zealot','Champion','Ascendant','Harbinger','Seraph'];
+const RANKS=['Novice','Adept','Fighter','Warrior','Veteran','Champion','Master','Ascendant','Paragon','Apex'];
 function xpTotal(){
   let xp=0,streak=0;
   for(const k of Object.keys(S.days).sort()){
@@ -992,27 +992,42 @@ function currentStreak(){
 }
 
 /* ---- the warrior: original pixel sprite, gains gear as the level climbs ---- */
-const SPAL={k:'#0C1116',R:'#8E2740',s:'#151D27',g:'#F5C542',c:'#2C3A47',
-            m:'#7C8EA0',M:'#C9D6E2',w:'#B33A2E',W:'#E24B3A'};
+const SPAL={"K":"#080C11","S":"#EFAE7E","s":"#C07C4F","L":"#FFD2AC","H":"#DCE6F0","h":"#93A7BC","I":"#FFFFFF","T":"#3C5670","t":"#26384B","U":"#587a99","P":"#2B3A4A","p":"#1B2632","Q":"#3E5468","B":"#C6402F","b":"#8E2A1E","N":"#EE5A45","W":"#E4E9EE","w":"#A8B4C0","V":"#FFFFFF","E":"#1B2632","a":"#F5C542","A":"#FFE9A8","O":"#FFFFFF"};
 const SPRITES=[
-[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk.........','........kRRRRRRk........','........kRssssRk........','........kRgssgRk........','........kRssssRk........','........kRRRRRRk........','.......kRRRRRRRRk.......','.......kRRRRRRRRk.......','......kRRRRRRRRRRk......','......kRRRRRRRRRRk......','......kRRRRRRRRRRk......','.....kRRRRRRRRRRRRk.....','.....kRRRRRRRRRRRRk.....','.....kkkkkkkkkkkkkk.....','........................' ],
-[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk.........','........kRRRRRRk........','........kRssssRk........','........kRgssgRk........','........kRssssRk........','........kRRRRRRk........','.......kcRRRRRRck.......','.......kcRRRRRRck.......','......kcRRRRRRRRck......','......kcRRRRRRRRck......','......kcRRRRRRRRck......','.....kcRRRRRRRRRRck.....','.....kcRRRRRRRRRRck.....','.....kkkkkkkkkkkkkk.....','........................' ],
-[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk.........','........kRRRRRRk........','........kRssssRk........','........kRgssgRk........','........kRssssRk........','........kRRRRRRk........','.......kMRRRRRRMk.......','.......kcRRRRRRck.......','......kcRRRRRRRRck......','......kcmmmmmmmmck......','......kcRRRRRRRRck......','.....kcRRRRRRRRRRck.....','.....kcRRRRRRRRRRck.....','.....kkkkkkkkkkkkkk.....','........................' ],
-[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk....M....','........kRRRRRRk...m....','........kRssssRk...m....','........kRgssgRk...m....','........kRssssRk...m....','........kRRRRRRk...m....','.......kMRRRRRRMk..m....','.......kcRRRRRRckmmm....','......kcRRRRRRRRck.m....','......kcmmmmmmmmck.m....','......kcRRRRRRRRck.m....','.....kcRRRRRRRRRRckm....','.....kcRRRRRRRRRRckm....','.....kkkkkkkkkkkkkkm....','........................' ],
-[ '........................','...........kk...........','..........kRRk..........','.........kRRRRk.........','....WWW.kRRRRRRk.WWW....','...WWWWWkRssssRkWWWWW...','..wwwwwwkRgssgRkwwwwww..','.wwwwwwwkRssssRkwwwwwww.','.wwwwwwwkRRRRRRkwwwwwww.','..wwwwwkMRRRRRRMkwwwww..','...wwwwkcRRRRRRckwwww...','....wwkcRRRRRRRRckww....','......kcmmmmmmmmck......','......kcRRRRRRRRck......','.....kcRRRRRRRRRRck.....','.....kcRRRRRRRRRRck.....','.....kkkkkkkkkkkkkk.....','........................' ]
+[ '........KhK...KhK....KhK........','...K.....K.....KK....KhK........','..KhK......K...KhK..KIhK........','...KhK....KhK..KhK..KIhK....K...','....KhKK...K...KIhKKIHhK...KhK..','.....KhhK....KKKIhKKIhK..KKhK...','......KhhK..KIIIHHIIHhKKKIhK....','.......KhhKKIHHHHHHHHhKIIhK.....','........KhIIHHHHHHHHHHIHhK......','.........KhHHHHHHHHHHHHhK.......','..........KIHHHHhHHHHHhK........','..........KhHHhhshhHhhK.........','...........KhhLLSLshshK.........','............KLESSSEsKK..........','............KLSSSSSsK...........','............KsSSSSSsK...........','.............KsSSSsK............','.............KKLSsKK............','...........KKLLSSSLsKK..........','..........KLLSSSSSSSLsK.........','..........KLSSSSSSSSSsK.........','.........KLSSSSSSSSSSSsK........','.........KLSSSSSSSSSSSSsK.......','........KLSSSSSSSSSSSSsSsK......','.......KLSSSSSSSSSSSSsKsSsK.....','.......KLSSSSSSSSSSSSsKKsSsK....','.......KLSssssSSSSSsssK.KLSsK...','......KLSsKKKKsssssKKK.KLSsK....','.....KLSsK..KQQQQQQpK..KLSsK....','.....KLSsK..KQPPPPPpK.KLSsK.....','.....KLSsK.KQPPPPPPpK.KLSsK.....','.....KsSsK.KQPPpppPpKKsSsK......','......KLSsKKQPpKKKQPpKKsK.......','......KsSsKQPpK..KQPpK.K........','.......KsKKQPpK..KpPpK..........','........K.KQPpK...KQPpK.........','..........KQPpK...KQPpK.........','..........KQPpK...KpPpK.........','..........KQPpK....KQPpK........','.........KQPpK.....KpPpK........','.........KpppK......KpppKK......','........KNNNNbK.....KNNNNbK.....','........KNBBBbK.....KNBBBbK.....','........KNBBBbK.....KNBBBbK.....','........KbbbbbK.....KbbbbbK.....','.........KKKKK.......KKKKK......','................................','................................' ],
+[ '........KhK...KhK....KhK........','...K.....K.....KK....KhK........','..KhK......K...KhK..KIhK........','...KhK....KhK..KhK..KIhK....K...','....KhKK...K...KIhKKIHhK...KhK..','.....KhhK....KKKIhKKIhK..KKhK...','......KhhK..KIIIHHIIHhKKKIhK....','.......KhhKKIHHHHHHHHhKIIhK.....','........KhIIHHHHHHHHHHIHhK......','.........KhHHHHHHHHHHHHhK.......','..........KIHHHHhHHHHHhK........','..........KhHHhhshhHhhK.........','...........KhhLLSLshshK.........','............KLESSSEsKK..........','............KLSSSSSsK...........','............KsSSSSSsK...........','.............KsSSSsK............','.............KKLSsKK............','...........KKUtLSsUtKK..........','..........KUUTtLSsUTUtK.........','..........KUTTtsSsUTTtK.........','.........KUTTTTtsUTTTTtK........','.........KUTTTTTUTTTTTTtK.......','........KUTTTTTTTTTTTTtTtK......','.......KUTTTTTTTTTTTTtKtTtK.....','.......KUTTTTTTTTTTTTtKKttsK....','.......KUTttttTTTTTtttK.KLSsK...','......KtTtKKKKtttttKKK.KLSsK....','.....KtstK..KQQQQQQpK..KLSsK....','.....KLSsK..KQPPPPPpK.KLSsK.....','.....KLSsK.KQPPPPPPpK.KLSsK.....','.....KsSsK.KQPPpppPpKKsSsK......','......KLSsKKQPpKKKQPpKKsK.......','......KsSsKQPpK..KQPpK.K........','.......KsKKQPpK..KpPpK..........','........K.KQPpK...KQPpK.........','..........KQPpK...KQPpK.........','..........KQPpK...KpPpK.........','..........KQPpK....KQPpK........','.........KQPpK.....KpPpK........','.........KpppK......KpppKK......','........KNNNNbK.....KNNNNbK.....','........KNBBBbK.....KNBBBbK.....','........KNBBBbK.....KNBBBbK.....','........KbbbbbK.....KbbbbbK.....','.........KKKKK.......KKKKK......','................................','................................' ],
+[ '........KhK...KhK....KhK........','...K.....K.....KK....KhK........','..KhK......K...KhK..KIhK........','...KhK....KhK..KhK..KIhK....K...','....KhKK...K...KIhKKIHhK...KhK..','.....KhhK....KKKIhKKIhK..KKhK...','......KhhK..KIIIHHIIHhKKKIhK....','.......KhhKKIHHHHHHHHhKIIhK.....','........KhIhhhhhhhhhhhIHhK......','.........KhNNNNNNNNNNbIhK.......','..........KbbbbbbbbbbbhK........','..........KhIIhhshhIhhK.........','...........KhhLLSLshshK.........','............KLESSSEsKK..........','............KLSSSSSsK...........','............KsSSSSSsK...........','.............KsSSSsK............','.............KKLSsKK............','...........KKUtLSsUtKK..........','..........KUUTtLSsUTUtK.........','..........KUTTtsSsUTTtK.........','.........KUTTTTtsUTTTTtK........','.........KUTTTTTUTTTTTTtK.......','........KUTTTTTTTTTTTTtTtK......','.......KUTTTTTTTTTTTTtKtTtK.....','.......KUTTTttttttttttKKttsK....','.......KUTttNNNNNNNNbtK.KsSsK...','......KtTtKKNBBBBBBBbK.KswsK....','.....KtstK.KbbbbbbbbbK.KVWwK....','.....KLssK..KQQQQQQpK.KVWwK.....','.....KswsK.KQPPPPPPpK.KVWwK.....','.....KVWwK.KQPPpppPpKKwWwK......','.....KwWwsKKQPpKKKQPpKKwK.......','......KwWwKQPpK..KQPpK.K........','.......KwKKQPpK..KpPpK..........','........K.KQPpK...KQPpK.........','..........KQPpK...KQPpK.........','..........KQPpK...KpPpK.........','..........KQPpK....KQPpK........','.........KQPpK.....KpPpK........','.........KpppK......KpppKK......','........KNNNNbK.....KNNNNbK.....','........KNBBBbK.....KNBBBbK.....','........KNBBBbK.....KNBBBbK.....','........KbbbbbK.....KbbbbbK.....','.........KKKKK.......KKKKK......','................................','................................' ],
+[ '........KhK...KhK....KhK........','...K.....K.....KK....KhK........','..KhK...aa.K...KhK..KIhKa.......','...KhK..aaKhK..KhK..KIhKa...K...','....KhKK.aaK...KIhKKIHhK...KhK..','.....KhhK.a..KKKIhKKIhKaaKKhK...','......KhhK..KIIIHHIIHhKKKIhK....','.......KhhKKIHHHHHHHHhKIIhK.....','........KhIhhhhhhhhhhhIHhK......','.........KhNNNNNNNNNNbIhK.......','..........KbbbbbbbbbbbhK........','..........KhIIhhshhIhhK.........','...........KhhLLSLshshK.........','............KLESSSEsKK..........','...aaa......KLSSSSSsK....a.aaa..','..a.aaa.....KsSSSSSsK....aa.aa..','..aa.aa......KsSSSsK.....aaa.a..','..aaa.a......KKLSsKK......aaa...','...aaa.....KKUtLSsUtKK...a.aaa..','..a.aaa...KtUTtLSsUTUtK..aa.aa..','..aa.aa...KstTtsSsUTtsK..aaa.a..','..aaa.a..KLSsUTtsUTtsSsK..aaa...','...aaa...KLSsUTTUTTTtsSsK..aa...','....aa..KLSsUTTTTTTTTtsSsKa.a...','...a.a.KLSsUTTTTTTTTTtKsSsKa....','...aa..KLSsUttttttttttKKsSsKa...','...aaa.KLSstNNNNNNNNbtK.KsSsK...','....aaKLSsKKNBBBBBBBbK.KswsKa...','...a.KLSsK.KbbbbbbbbbK.KVWwK....','...aaKLssK..KQQQQQQpK.KVWwKaa...','...aaKswsK.KQPPPPPPpK.KVWwKaa...','....aKVWwK.KQPPpppPpKKwWwKa.a...','...a.KwWwsKKQPpKKKQPpKKwK.aa....','...aa.KwWwKQPpK..KQPpK.K..aaa...','...aaa.KwKKQPpK..KpPpK.....aa...','....aa..K.KQPpK...KQPpK...a.a...','...a.a....KQPpK...KQPpK...aa....','....a.....KQPpK...KpPpK....a....','....a.....KQPpK....KQPpK...a....','....a....KQPpK.....KpPpK........','.........KpppK......KpppKK.a....','....a...KNNNNbK.....KNNNNbKa....','....a...KNBBBbK.....KNBBBbKa....','....a...KNBBBbK.....KNBBBbK.....','........KbbbbbK.....KbbbbbK.....','.........KKKKK.......KKKKK......','................................','................................' ],
+[ '........KhK...KhKAA..KhK........','...K.....K....AKK.A..KhK........','..KhK...aa.K...KhK..KIhKa.......','...KhK..aaKhK..KhK..KIhKa...K...','....KhKK.aaK...KIhKKIHhK.AAKhK..','.....KhhK.a..KKKIhKKIhKaaKKhK...','.....AKhhK..KIIIHHIIHhKKKIhK....','.....AAKhhKKIHHHHHHHHhKIIhK.....','.....AAAKhIhhhhhhhhhhhIHhKAA....','......A..KhNNNNNNNNNNbIhK.A.....','AA.AA.....KbbbbbbbbbbbhK...AAA.A','AAA.A.A...KhIIhhshhIhhK...A.AAA.','.AAA..A....KhhLLSLshshK...AA.AAA','A.AAA.A.....KLESSSEsKK....AAA.AA','AA.aaa......KLSSSSSsK....a.aaa.A','AAa.aaa.....KsSSSSSsK....aa.aaA.','.Aaa.aa......KsSSSsK.....aaa.aAA','A.aaa.a......KKLSsKK......aaa.AA','AA.aaa.....KKUtLSsUtKK...a.aaa.A','AAa.aaa...KtUTtLSsUTUtK..aa.aaA.','.Aaa.aa...KstTtsSsUTtsK..aaa.aA.','..aaa.a..KLSsUTtsUTtsSsK..aaa.A.','.A.aaa...KLSsUTTUTTTtsSsK..aaA..','.AA.aa..KLSsUTTTTTTTTtsSsKa.aAA.','.AAa.a.KLSsUTTTTTTTTTtKsSsKa.AA.','..Aaa..KLSsUttttttttttKKsSsKa.A.','.A.aaa.KLSstNNNNNNNNbtK.KsSsKA..','.AA.aaKLSsKKNBBBBBBBbK.KswsKaAA.','.AAa.KLSsK.KbbbbbbbbbK.KVOOO.AA.','..AaaKLssK..KQQQQQQpK.KVOOOOO.A.','.A.aaKswsK.KQPPPPPPpK.KVOOOOOA..','.AA.aKVWwK.KQPPpppPpKKwWOOOOOAA.','.AAa.KwWwsKKQPpKKKQPpKKwKOOO.AA.','..Aaa.KwWwKQPpK..KQPpK.K..aaa.A.','.A.aaa.KwKKQPpK..KpPpK.....aaA..','.AA.aa..K.KQPpK...KQPpK...a.aAA.','.AAa.a....KQPpK...KQPpK...aa.AA.','..A.a.....KQPpK...KpPpK....a....','....a.....KQPpK....KQPpK...a.A..','..A.a....KQPpK.....KpPpK.....A..','..A......KpppK......KpppKK.a.A..','..A.a...KNNNNbK.....KNNNNbKa....','....a...KNBBBbK.....KNBBBbKa.A..','..A.a...KNBBBbK.....KNBBBbK..A..','..A.....KbbbbbK.....KbbbbbK..A..','..A......KKKKK.......KKKKK......','................................','................................' ]
 ];
+/* Drops in a real sprite sheet when one exists: put a warrior.png next to
+   index.html, five equal frames side by side, lowest tier first. Without it
+   the built-in drawn sprite is used. */
+let sheet=null, sheetOk=false;
+(function(){ const im=new Image();
+  im.onload=()=>{ if(im.width>=5&&im.height>0){ sheet=im; sheetOk=true; drawSprite(); } };
+  im.onerror=()=>{ sheetOk=false; };
+  im.src='warrior.png'; })();
+function spriteTier(){ return clamp(Math.floor((levelInfo().level-1)/2),0,4); }
 function drawSprite(){
   const cv=$('#sprite'); if(!cv) return;
-  const tier=clamp(Math.floor((levelInfo().level-1)/2),0,4);
-  const grid=SPRITES[tier], ctx=cv.getContext('2d');
-  ctx.clearRect(0,0,24,18);
+  const tier=spriteTier(), ctx=cv.getContext('2d');
+  if(sheetOk&&sheet){
+    const fw=Math.floor(sheet.width/5), fh=sheet.height;
+    if(cv.width!==fw||cv.height!==fh){ cv.width=fw; cv.height=fh; }
+    ctx.imageSmoothingEnabled=false;
+    ctx.clearRect(0,0,fw,fh);
+    ctx.drawImage(sheet, tier*fw,0, fw,fh, 0,0, fw,fh);
+    return;
+  }
+  const grid=SPRITES[tier];
+  if(cv.width!==grid[0].length||cv.height!==grid.length){ cv.width=grid[0].length; cv.height=grid.length; }
+  ctx.clearRect(0,0,cv.width,cv.height);
   for(let y=0;y<grid.length;y++){
     const row=grid[y];
     for(let x=0;x<row.length;x++){
-      const ch=row[x];
-      if(ch==='.'||ch==='x') continue;
-      ctx.fillStyle=SPAL[ch]||'#fff';
-      ctx.fillRect(x,y,1,1);
+      const ch=row[x]; if(ch==='.') continue;
+      ctx.fillStyle=SPAL[ch]||'#fff'; ctx.fillRect(x,y,1,1);
     }
   }
 }
