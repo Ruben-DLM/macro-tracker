@@ -355,8 +355,9 @@ function zxHints(){
    Full-resolution phone photos are both slow and, on iOS, prone to blowing the
    canvas memory budget, so nothing is ever decoded at native size. */
 function frameUrl(img,maxDim,crop,rot){
-  let sx=0,sy=0,sw=img.naturalWidth,sh=img.naturalHeight;
-  if(crop){ sw=img.naturalWidth*crop; sh=img.naturalHeight*crop; sx=(img.naturalWidth-sw)/2; sy=(img.naturalHeight-sh)/2; }
+  const W=img.naturalWidth||img.videoWidth, H=img.naturalHeight||img.videoHeight;
+  let sx=0,sy=0,sw=W,sh=H;
+  if(crop){ sw=W*crop; sh=H*crop; sx=(W-sw)/2; sy=(H-sh)/2; }
   const k=Math.min(1,maxDim/Math.max(sw,sh));
   const w=Math.max(1,Math.round(sw*k)), h=Math.max(1,Math.round(sh*k));
   const cv=document.createElement('canvas');
@@ -379,8 +380,9 @@ async function decodeStill(img){
 }
 
 /* ---------- barcode: live camera ---------- */
-let stream=null, zxControls=null, rafId=null;
+let stream=null, zxControls=null, rafId=null, scanTimer=null;
 function stopScan(){
+  if(scanTimer) clearTimeout(scanTimer), scanTimer=null;
   if(rafId) cancelAnimationFrame(rafId), rafId=null;
   if(zxControls){ try{zxControls.stop()}catch(e){} zxControls=null; }
   if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
@@ -413,9 +415,33 @@ async function liveScan(){
   }else{
     try{
       await loadScript(ZXING);
+      /* ZXing's own decodeFromVideoElement watches the raw stream and, in testing,
+         never fired on a cleanly framed barcode. Grabbing frames ourselves and
+         running the same decoder used for stills hits on the first attempt. */
       const reader=new ZXing.BrowserMultiFormatReader(zxHints());
       zxControls={stop:()=>{try{reader.reset()}catch(e){}}};
-      reader.decodeFromVideoElement(video,(res)=>{ if(res){ stopScan(); lookupBarcode(res.getText()); } });
+      const passes=[[1000,0,0],[1000,0.55,0],[1000,0,1]];
+      let tries=0, t0=Date.now();
+      const tick=async()=>{
+        if(!stream) return;
+        if(video.videoWidth&&video.videoHeight){
+          const pass=passes[tries%passes.length]; tries++;
+          try{
+            const r=await reader.decodeFromImageUrl(frameUrl(video,pass[0],pass[1],pass[2]));
+            const txt=r&&r.getText&&r.getText();
+            if(txt){ stopScan(); return lookupBarcode(txt); }
+          }catch(e){}
+          const el=$('#scanMsg');
+          if(el && tries%6===0){
+            const secs=Math.round((Date.now()-t0)/1000);
+            el.textContent = secs>18
+              ? 'Still looking. Try moving closer, or use the Type option below.'
+              : 'Scanning, hold steady. Fill the box with the barcode.';
+          }
+        }
+        scanTimer=setTimeout(tick,300);
+      };
+      tick();
     }catch(e){
       $('#scanMsg').className='err'; $('#scanMsg').textContent='Could not load the scanner. Check your connection, or type the number instead.';
     }
