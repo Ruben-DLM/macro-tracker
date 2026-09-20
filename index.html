@@ -102,7 +102,8 @@ nav button.on svg{stroke:var(--cal)}
 label.fld{display:block; margin-bottom:12px}
 label.fld span{display:block; color:var(--dim); font-size:.78rem; margin-bottom:5px}
 input[type=text],input[type=number],input[type=search],input[type=date]{width:100%; padding:12px 13px; background:var(--panel); border:1px solid var(--line); border-radius:12px; outline:none}
-input:focus{border-color:var(--cal)}
+select{width:100%; padding:12px 13px; background:var(--panel); border:1px solid var(--line); border-radius:12px; color:var(--text); outline:none; -webkit-appearance:none; appearance:none}
+input:focus,select:focus{border-color:var(--cal)}
 .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .row4{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
 .primary{width:100%; padding:15px; border-radius:14px; background:var(--cal); color:#1A1206; font-weight:600; margin-top:6px}
@@ -185,6 +186,7 @@ input:focus{border-color:var(--cal)}
     </div>
     <div class="track"><i id="calBar" style="width:0%"></i></div>
     <div class="eaten"><span id="eatenTxt">0 eaten</span><span id="goalTxt">goal 2000</span></div>
+    <div class="eaten hide" id="burnRow"><span id="burnTxt"></span><span id="netTxt"></span></div>
   </section>
 
   <section class="macros">
@@ -256,11 +258,72 @@ input:focus{border-color:var(--cal)}
   <div class="card" id="cardBreak"></div>
 </main>
 
+
+<main class="wrap hide" id="viewMove">
+  <div class="stats" id="burnStats" style="margin-top:14px"></div>
+
+  <button class="primary" id="logUsual" style="margin-bottom:6px">Log my usual day</button>
+  <p class="note" id="usualNote"></p>
+
+  <div class="sec"><h2>Steps</h2></div>
+  <label class="fld"><span>Steps walked</span><input type="number" id="stepsIn" inputmode="numeric" placeholder="e.g. 8400"></label>
+  <div class="pills">
+    <button class="pill" id="stepsAll">Steps are separate from my sessions</button>
+    <button class="pill" id="stepsNet">My counter already includes them</button>
+  </div>
+  <p class="note" id="stepsNote"></p>
+
+  <div class="sec"><h2>Sleep</h2></div>
+  <label class="fld"><span>Hours slept last night</span><input type="number" id="sleepIn" inputmode="decimal" step="0.25" placeholder="e.g. 7.5"></label>
+  <p class="note" id="sleepNote"></p>
+
+  <div class="sec"><h2>Treadmill</h2></div>
+  <div class="row4">
+    <label class="fld"><span>Minutes</span><input type="number" id="tMin" inputmode="decimal" step="any" placeholder="30"></label>
+    <label class="fld"><span>Speed (mph)</span><input type="number" id="tMph" inputmode="decimal" step="0.1" placeholder="3.5"></label>
+    <label class="fld"><span id="tIncLbl">Incline (%)</span><input type="number" id="tInc" inputmode="decimal" step="0.5" placeholder="0"></label>
+    <label class="fld"><span>Calories (optional)</span><input type="number" id="tCal" inputmode="numeric" placeholder="auto"></label>
+  </div>
+  <div class="pills">
+    <button class="pill" id="incPct">My console shows %</button>
+    <button class="pill" id="incDeg">My console shows degrees</button>
+  </div>
+  <p class="note" id="tPrev">Enter minutes and speed for an estimate.</p>
+  <button class="primary" id="addTread">Add treadmill session</button>
+
+  <div class="sec"><h2>Workout</h2></div>
+  <label class="fld"><span>Type</span><select id="wType"></select></label>
+  <label class="fld hide" id="wNameWrap"><span>Call it</span><input type="text" id="wName" placeholder="e.g. Jiu jitsu"></label>
+  <div class="row4">
+    <label class="fld"><span>Minutes</span><input type="number" id="wMin" inputmode="decimal" step="any" placeholder="45"></label>
+    <label class="fld"><span>Calories (optional)</span><input type="number" id="wCal" inputmode="numeric" placeholder="auto"></label>
+  </div>
+  <p class="note" id="wPrev">Pick a type and minutes for an estimate.</p>
+  <button class="primary" id="addWork">Add workout</button>
+
+  <div class="sec"><h2>Logged</h2><span class="num" id="actCount" style="color:var(--dim);font-size:.85rem"></span></div>
+  <div id="actList"></div>
+
+  <div class="sec"><h2>My usual</h2></div>
+  <p class="note">Set this once. The button at the top of this tab fills it all in with one tap, and the treadmill boxes start here every day.</p>
+  <div class="row4">
+    <label class="fld"><span>Usual steps</span><input type="number" id="uSteps" inputmode="numeric"></label>
+    <label class="fld"><span>Usual minutes</span><input type="number" id="uMin" inputmode="decimal" step="any"></label>
+    <label class="fld"><span>Usual mph</span><input type="number" id="uMph" inputmode="decimal" step="0.1"></label>
+    <label class="fld"><span id="uIncLbl">Usual incline (%)</span><input type="number" id="uInc" inputmode="decimal" step="0.5"></label>
+    <label class="fld"><span>Usual sleep (hours)</span><input type="number" id="uSleep" inputmode="decimal" step="0.25"></label>
+    <label class="fld"><span>Sleep needed (hours)</span><input type="number" id="uSleepMin" inputmode="decimal" step="0.25"></label>
+  </div>
+  <button class="ghost" id="saveUsual">Save as my usual</button>
+  <p class="note">Steps and sessions both count toward burn. Burn is estimated above resting, so it is the extra the effort cost you. It will read lower than the treadmill console, which counts the calories you would have burned sitting there anyway. Type a number in the Calories box to override the estimate.</p>
+</main>
+
 <div class="updbar" id="updBar"><span>A newer version is available.</span><button id="updGo">Update</button></div>
 
 <nav><div class="wrap">
   <button data-tab="today" class="on"><svg viewBox="0 0 24 24"><path d="M4 19V10M10 19V5M16 19v-6M22 19H2"/></svg>Today</button>
   <button data-tab="add"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add</button>
+  <button data-tab="move"><svg viewBox="0 0 24 24"><path d="M13 4.5a1.4 1.4 0 1 0 0-.1zM9 21l2.2-5.2L9 13.4V9l3.6-1.5 3 2.2 2.9.6"/><path d="M6.2 21l2.3-4.1M5 10.2L8.6 8"/></svg>Move</button>
   <button data-tab="progress"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 5-8"/><circle cx="17" cy="6" r="1.6"/></svg>Progress</button>
   <button data-tab="foods"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM8 4v16M12 8h5M12 12h5"/></svg>Foods</button>
   <button data-tab="goals"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>Targets</button>
@@ -286,13 +349,30 @@ const store={
 const DEF={
   goals:{cal:2200,p:180,c:200,f:65},
   days:{}, library:{}, weights:{},
-  profile:{startW:0, goalW:0, rate:1.75, tdee:0}
+  act:{}, steps:{}, sleep:{},
+  profile:{startW:0, goalW:0, rate:1.75, tdee:0,
+           usual:{steps:3000, min:40, mph:3.2, inc:0, sleep:7.5},
+           stepsNet:false, inclineUnit:'pct', sleepMin:7}
 };
 DEF.library=[];
 let S=Object.assign({},DEF,store.get()||{});
 S.goals=Object.assign({},DEF.goals,S.goals||{});
 S.profile=Object.assign({},DEF.profile,S.profile||{});
 S.days=S.days||{}; S.library=S.library||[]; S.weights=S.weights||{};
+S.act=S.act||{}; S.steps=S.steps||{};   /* added 2026-09-20: activity log + daily step count */
+S.sleep=S.sleep||{};
+S.profile.usual=Object.assign({steps:3000,min:40,mph:3.2,inc:0,sleep:7.5},S.profile.usual||{});
+if(typeof S.profile.stepsNet!=='boolean') S.profile.stepsNet=false;
+if(S.profile.inclineUnit!=='deg') S.profile.inclineUnit='pct';
+if(!(S.profile.sleepMin>0)) S.profile.sleepMin=7;
+/* One time: Ruben's treadmill reports incline in degrees and sits at 6.67,
+   which is an 11.7% grade. Runs once and never touches the values again,
+   so changing either in the app sticks. */
+if(!S.profile.inclineSet){
+  S.profile.inclineSet=1;
+  S.profile.inclineUnit='deg';
+  if(!(S.profile.usual.inc>0)) S.profile.usual.inc=6.67;
+}
 
 /* Storage hardening. localStorage stays the primary store, but a mirror in
    IndexedDB means clearing one of them does not lose everything, and the app
@@ -345,7 +425,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-09-20.1';
+const APP_VERSION='2026-09-20.4';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -362,6 +442,7 @@ const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
 const r0=n=>Math.round(n||0);
 const r1=n=>Math.round((n||0)*10)/10;
+const r2=n=>String(Math.round((n||0)*100)/100);   // keeps 6.67 as 6.67, 6 as 6
 const iso=d=>{const x=new Date(d); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,10);};
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 let day=iso(new Date());
@@ -391,6 +472,12 @@ function render(){
   $('#calBar').style.background = left<0?'var(--fat)':'var(--cal)';
   $('#eatenTxt').textContent=r0(t.cal)+' eaten';
   $('#goalTxt').textContent='target '+r0(g.cal);
+  const bn=dayBurn(day);
+  $('#burnRow').classList.toggle('hide',bn<=0);
+  if(bn>0){
+    $('#burnTxt').textContent=r0(bn)+' burned';
+    $('#netTxt').textContent='net '+r0(t.cal-bn);
+  }
 
   [['p','p'],['c','c'],['f','f']].forEach(([k])=>{
     $('#'+k+'V').textContent=r0(t[k]);
@@ -418,8 +505,9 @@ document.addEventListener('click',ev=>{
   const d=ev.target.closest('[data-del]'); if(d){ S.days[day]=dayEntries().filter(e=>e.id!==d.dataset.del); render(); }
   if(ev.target.closest('[data-close]')) closeSheet();
 });
-$('#prevDay').onclick=()=>{ day=iso(new Date(new Date(day+'T12:00').getTime()-864e5)); render(); };
-$('#nextDay').onclick=()=>{ day=iso(new Date(new Date(day+'T12:00').getTime()+864e5)); render(); };
+function afterDayChange(){ render(); if(!$('#viewMove').classList.contains('hide')) renderMove(); }
+$('#prevDay').onclick=()=>{ day=iso(new Date(new Date(day+'T12:00').getTime()-864e5)); afterDayChange(); };
+$('#nextDay').onclick=()=>{ day=iso(new Date(new Date(day+'T12:00').getTime()+864e5)); afterDayChange(); };
 
 /* ---------- tabs ---------- */
 $$('nav button').forEach(b=>b.onclick=()=>{
@@ -430,9 +518,12 @@ $$('nav button').forEach(b=>b.onclick=()=>{
   $('#viewFoods').classList.toggle('hide',tab!=='foods');
   $('#viewGoals').classList.toggle('hide',tab!=='goals');
   $('#viewProgress').classList.toggle('hide',tab!=='progress');
-  $('#dateHdr').classList.toggle('hide',tab!=='today');
+  $('#viewMove').classList.toggle('hide',tab!=='move');
+  $('#dateHdr').classList.toggle('hide',tab!=='today'&&tab!=='move');
+  if(tab==='today') render();
   if(tab==='foods') renderLib();
   if(tab==='progress') renderProgress();
+  if(tab==='move') renderMove();
 });
 
 /* ---------- sheet plumbing ---------- */
@@ -700,35 +791,366 @@ async function lookupBarcode(code){
 }
 async function searchUI(){
   openSheet(`<h3>Search foods</h3>
-    <label class="fld"><input type="search" id="q" placeholder="Greek yogurt, ribeye, oatmeal..." autocomplete="off" enterkeyhint="search"></label>
-    <div id="sr"><p class="note">Type at least 3 letters. Results come from Open Food Facts, which limits how often it can be called, so this waits until you pause typing.</p></div>`);
+    <label class="fld"><input type="search" id="q" placeholder="Chicken breast, carne asada, oatmeal..." autocomplete="off" enterkeyhint="search"></label>
+    <div id="cats" class="pills"></div>
+    <div id="sr"></div>`);
   const q=$('#q'); q.focus();
-  let tid, token=0;
-  const go=()=>{ clearTimeout(tid); tid=setTimeout(runSearch,850); };
-  q.oninput=go;
-  q.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); clearTimeout(tid); runSearch(); } };
-  async function runSearch(){
+  let tid, token=0, shown=[], offShown=[];
+
+  $('#cats').innerHTML=FOODCATS.map(c=>'<button class="pill" data-cat="'+esc(c)+'">'+esc(c)+'</button>').join('');
+  $$('#cats .pill').forEach(b=>b.onclick=()=>{
+    $$('#cats .pill').forEach(x=>x.classList.toggle('on',x===b));
+    shown=FOODDB.filter(f=>f.cat===b.dataset.cat);
+    $('#sr').innerHTML='<p class="note">'+shown.length+' in '+esc(b.dataset.cat)+'</p>'+shown.map(dbRow).join('');
+    wireRows();
+  });
+  function wireRows(){
+    $$('#sr [data-db]').forEach(b=>b.onclick=()=>editFood(dbToFood(shown[+b.dataset.db])));
+    $$('#sr [data-off]').forEach(b=>b.onclick=()=>editFood(offShown[+b.dataset.off]));
+  }
+  function paintLocal(term){
+    shown=dbSearch(term,25);
+    const head = shown.length
+      ? '<p class="note">'+shown.length+' from the built-in list</p>'
+      : '<p class="note">Nothing built in matches that. Checking Open Food Facts...</p>';
+    $('#sr').innerHTML=head+shown.map(dbRow).join('')+'<div id="offBox"></div>';
+    wireRows();
+  }
+  function idle(){
+    $$('#cats .pill').forEach(x=>x.classList.remove('on'));
+    $('#sr').innerHTML='<p class="note">Start typing, or tap a category. The built-in list is '+FOODDB.length+
+      ' common foods and answers instantly. Packaged and branded products come from Open Food Facts a moment later.</p>';
+  }
+  idle();
+
+  q.oninput=()=>{
     const term=q.value.trim();
-    if(term.length<3){ $('#sr').innerHTML='<p class="note">Type at least 3 letters.</p>'; return; }
-    const mine=++token;
-    $('#sr').innerHTML='<p class="note"><span class="spin"></span>Searching...</p>';
+    clearTimeout(tid);
+    if(term.length<2){ $('#cats').classList.remove('hide'); idle(); return; }
+    $('#cats').classList.add('hide');       // give the results the screen
+    paintLocal(term);                       // instant, no network
+    tid=setTimeout(()=>runOff(term),850);   // OFF is rate limited, so wait for a pause
+  };
+  q.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); clearTimeout(tid); const t=q.value.trim(); if(t.length>=2){ paintLocal(t); runOff(t); } } };
+
+  async function runOff(term){
+    if(term.length<3) return;
+    const mine=++token, box=$('#offBox');
+    if(!box) return;
+    box.innerHTML='<p class="note"><span class="spin"></span>Searching Open Food Facts...</p>';
     const url='https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=12&fields=code,product_name,brands,nutriments,serving_size&search_terms='+encodeURIComponent(term);
     try{
       const j=await offGetRetry(url,15000);
-      if(mine!==token) return;                       // a newer search superseded this one
-      const hits=(j.products||[]).map(p=>fromOFF(p)).filter(f=>f.name!=='Unnamed product'&&f.per100.cal);
-      if(!hits.length){ $('#sr').innerHTML='<p class="note">No matches. Try the brand name, or add it manually.</p>'; return; }
-      $('#sr').innerHTML=hits.map((f,i)=>`<button class="res" data-i="${i}"><b>${esc(f.name)}</b><small>${esc(f.brand||'')}${f.brand?' &middot; ':''}${r0(f.per100.cal)} cal per 100 g</small></button>`).join('');
-      $$('#sr .res').forEach(b=>b.onclick=()=>editFood(hits[+b.dataset.i]));
+      if(mine!==token || !$('#offBox')) return;
+      offShown=(j.products||[]).map(p=>fromOFF(p)).filter(f=>f.name!=='Unnamed product'&&f.per100.cal);
+      $('#offBox').innerHTML = offShown.length
+        ? '<p class="note">Packaged products from Open Food Facts</p>'+offShown.map((f,i)=>
+            '<button class="res" data-off="'+i+'"><b>'+esc(f.name)+'</b><small>'+esc(f.brand||'')+(f.brand?' &middot; ':'')+r0(f.per100.cal)+' cal per 100 g</small></button>').join('')
+        : '<p class="note">No packaged matches either. Tap Enter it manually on the Add screen to type your own.</p>';
+      wireRows();
     }catch(e){
-      if(mine!==token) return;
-      $('#sr').innerHTML='<p class="err">'+esc(offReason(e))+'</p>'
-        +'<button class="ghost" id="again">Try again</button>'
-        +'<button class="ghost" id="man">Enter it manually instead</button>';
-      $('#again').onclick=runSearch;
-      $('#man').onclick=()=>editFood(blankFood());
+      if(mine!==token || !$('#offBox')) return;
+      $('#offBox').innerHTML='<p class="note">'+esc(offReason(e))+' The built-in results above still work.</p>';
     }
   }
+}
+
+/* ================= built-in common foods =================
+   Reference values per 100 g. Open Food Facts is strong on packaged and
+   barcoded products and weak on whole foods, restaurant plates and staples,
+   which is exactly what gets eaten most. This table fills that gap, works
+   with no network, and returns instantly. Picking one opens the same editor
+   as everything else, so any number can be corrected before it is logged. */
+const FOODDB_RAW=`Chicken breast, cooked|165|31|0|3.6|113|4 oz|Poultry|1
+Chicken breast, raw|120|22.5|0|2.6|113|4 oz|Poultry|-1
+Chicken thigh, cooked, skinless|179|24.8|0|8.2|100|1 thigh|Poultry|1
+Chicken thigh, cooked, with skin|229|25.1|0|13.6|110|1 thigh|Poultry|0
+Chicken drumstick, cooked, skinless|172|28.3|0|5.7|75|1 drumstick|Poultry|0
+Chicken wing, cooked, with skin|290|27|0|19.5|34|1 wing|Poultry|0
+Rotisserie chicken, white meat|168|29|0|5.3|113|4 oz|Poultry|0
+Rotisserie chicken, dark meat|205|26|0|10.5|113|4 oz|Poultry|0
+Ground chicken, cooked, 93/7|189|23.8|0|10|113|4 oz|Poultry|0
+Ground turkey, cooked, 93/7|203|27|0|10.4|113|4 oz|Poultry|1
+Ground turkey, cooked, 99/1|130|27.5|0|1.8|113|4 oz|Poultry|0
+Turkey breast, deli sliced|104|17.1|3.5|2.3|56|2 oz|Poultry|0
+Chicken breast, deli sliced|95|17|2.5|1.8|56|2 oz|Poultry|0
+Ground beef, cooked, 80/20|254|25.8|0|16.2|113|4 oz|Beef|1
+Ground beef, cooked, 85/15|218|26.1|0|11.9|113|4 oz|Beef|0
+Ground beef, cooked, 90/10|196|26.6|0|9.1|113|4 oz|Beef|1
+Ground beef, cooked, 93/7|172|26.8|0|6.5|113|4 oz|Beef|0
+Sirloin steak, cooked|201|29.5|0|8.3|170|6 oz|Beef|1
+Ribeye steak, cooked|291|24.8|0|20.9|227|8 oz|Beef|0
+New York strip, cooked|243|27|0|14.4|227|8 oz|Beef|0
+Filet mignon, cooked|212|29.4|0|9.8|170|6 oz|Beef|0
+Flank steak, cooked|192|30|0|7.3|113|4 oz|Beef|0
+Skirt steak, cooked|218|28|0|11|113|4 oz|Beef|0
+Carne asada, cooked|220|27|1.5|11.5|113|4 oz|Beef|1
+Beef brisket, cooked|246|28|0|14|113|4 oz|Beef|0
+Beef chuck roast, cooked|250|27.5|0|15|113|4 oz|Beef|0
+Beef jerky|280|33|22|7|28|1 oz|Beef|0
+Corned beef|251|18.2|0.5|19|85|3 oz|Beef|0
+Pork chop, cooked, boneless|231|27.3|0|13|113|4 oz|Pork|1
+Pork tenderloin, cooked|143|26|0|3.5|113|4 oz|Pork|0
+Pork shoulder, cooked|269|24.5|0|18.5|113|4 oz|Pork|0
+Carnitas|276|24|1|19.5|113|4 oz|Pork|0
+Bacon, cooked|541|37|1.4|42|16|2 slices|Pork|1
+Turkey bacon, cooked|382|29|3|27|16|2 slices|Pork|0
+Pork sausage link, cooked|339|18.9|1.2|28.4|68|2 links|Pork|0
+Chorizo, cooked|455|24.1|1.9|38.3|60|2 oz|Pork|0
+Ham, deli sliced|107|16.6|2|3.3|56|2 oz|Pork|0
+Canadian bacon|110|16|2|4|56|2 oz|Pork|0
+Hot dog, beef|290|11|3|26|45|1 hot dog|Pork|0
+Pepperoni|504|19.3|1.2|46|28|1 oz|Pork|0
+Salmon, cooked, Atlantic|206|22.1|0|12.3|113|4 oz|Fish & seafood|1
+Salmon, cooked, sockeye|156|26.5|0|5|113|4 oz|Fish & seafood|0
+Tuna, canned in water, drained|116|25.5|0|0.8|142|1 can|Fish & seafood|1
+Tuna steak, cooked|184|29.9|0|6.3|113|4 oz|Fish & seafood|0
+Tilapia, cooked|129|26.2|0|2.7|113|4 oz|Fish & seafood|1
+Cod, cooked|105|22.8|0|0.9|113|4 oz|Fish & seafood|0
+Mahi mahi, cooked|109|23.7|0|0.9|113|4 oz|Fish & seafood|0
+Shrimp, cooked|99|20.9|0.2|1.4|113|4 oz|Fish & seafood|1
+Crab meat, cooked|97|19.4|0|1.5|85|3 oz|Fish & seafood|0
+Scallops, cooked|111|20.5|5.4|0.8|85|3 oz|Fish & seafood|0
+Sardines, canned in oil, drained|208|24.6|0|11.5|92|1 can|Fish & seafood|0
+Catfish, cooked|144|18.5|0|7.3|113|4 oz|Fish & seafood|0
+Egg, whole, large|143|12.6|0.7|9.5|50|1 egg|Eggs & dairy|1
+Egg white|52|10.9|0.7|0.2|33|1 white|Eggs & dairy|1
+Liquid egg whites|48|10|0.7|0|46|3 tbsp|Eggs & dairy|0
+Whole milk|61|3.2|4.8|3.3|244|1 cup|Eggs & dairy|1
+2% milk|50|3.3|4.8|2|244|1 cup|Eggs & dairy|1
+1% milk|42|3.4|5|1|244|1 cup|Eggs & dairy|0
+Skim milk|34|3.4|5|0.1|245|1 cup|Eggs & dairy|0
+Almond milk, unsweetened|15|0.6|0.6|1.2|240|1 cup|Eggs & dairy|0
+Oat milk|48|1.3|7.5|1.5|240|1 cup|Eggs & dairy|0
+Greek yogurt, plain, nonfat|59|10.2|3.6|0.4|170|1 container|Eggs & dairy|1
+Greek yogurt, plain, 2%|73|9.9|4.8|1.9|170|1 container|Eggs & dairy|0
+Greek yogurt, flavored, nonfat|85|8.5|12|0.2|150|1 container|Eggs & dairy|0
+Yogurt, plain, whole milk|61|3.5|4.7|3.3|170|1 container|Eggs & dairy|0
+Cottage cheese, 2%|84|11|4.3|2.3|113|1/2 cup|Eggs & dairy|1
+Cottage cheese, 4%|98|11.1|3.4|4.3|113|1/2 cup|Eggs & dairy|0
+Cheddar cheese|403|22.9|3.1|33.1|28|1 oz|Eggs & dairy|1
+Mozzarella, part skim|254|24.3|2.8|15.9|28|1 oz|Eggs & dairy|1
+Mozzarella, whole milk|300|22.2|2.2|22.1|28|1 oz|Eggs & dairy|0
+American cheese|371|19.5|5.1|30|21|1 slice|Eggs & dairy|0
+Swiss cheese|380|27|5.4|27.5|28|1 oz|Eggs & dairy|0
+Parmesan, grated|420|38|4|28|5|1 tbsp|Eggs & dairy|0
+Cream cheese|342|6.2|4.1|34.2|30|2 tbsp|Eggs & dairy|0
+Queso fresco|299|18|4|23|28|1 oz|Eggs & dairy|0
+Cotija cheese|368|24|3|29|28|1 oz|Eggs & dairy|0
+Butter|717|0.9|0.1|81.1|14|1 tbsp|Eggs & dairy|1
+Heavy cream|340|2.1|2.8|36.1|15|1 tbsp|Eggs & dairy|0
+Half and half|130|3|4.3|11.5|30|2 tbsp|Eggs & dairy|0
+Sour cream|198|2.4|4.6|19.4|30|2 tbsp|Eggs & dairy|0
+White rice, cooked|130|2.7|28.2|0.3|158|1 cup|Grains & starches|1
+Brown rice, cooked|123|2.7|25.6|1|195|1 cup|Grains & starches|1
+Mexican rice, cooked|145|2.9|26|3.2|158|1 cup|Grains & starches|1
+Jasmine rice, cooked|129|2.7|28|0.2|158|1 cup|Grains & starches|0
+Quinoa, cooked|120|4.4|21.3|1.9|185|1 cup|Grains & starches|1
+Pasta, cooked|158|5.8|30.9|0.9|140|1 cup|Grains & starches|1
+Whole wheat pasta, cooked|124|5.3|26.5|0.5|140|1 cup|Grains & starches|0
+Oatmeal, cooked|71|2.5|12|1.5|234|1 cup|Grains & starches|1
+Rolled oats, dry|389|16.9|66.3|6.9|40|1/2 cup|Grains & starches|1
+Instant oatmeal packet, plain|370|13|68|6.5|28|1 packet|Grains & starches|0
+White bread|266|9|49|3.3|28|1 slice|Grains & starches|1
+Whole wheat bread|247|13|41|3.5|43|1 slice|Grains & starches|1
+Sourdough bread|289|11.7|56|1.8|50|1 slice|Grains & starches|0
+Bagel, plain|257|10|50.5|1.5|98|1 bagel|Grains & starches|0
+English muffin|235|7.7|46|1.8|57|1 muffin|Grains & starches|0
+Corn tortilla|218|5.7|44.6|2.9|26|1 tortilla|Grains & starches|1
+Flour tortilla|306|8.2|51.4|7.4|45|1 tortilla|Grains & starches|1
+Tortilla chips|489|6.7|63|23.4|28|1 oz|Grains & starches|0
+Pita bread|275|9.1|55.7|1.2|60|1 pita|Grains & starches|0
+Hamburger bun|279|9.5|50|4|52|1 bun|Grains & starches|0
+Croissant|406|8.2|45.8|21|57|1 croissant|Grains & starches|0
+Pancake|227|6.4|28|9.7|77|2 pancakes|Grains & starches|0
+Waffle, frozen|291|6.5|41|11|70|2 waffles|Grains & starches|0
+Cereal, corn flakes|357|7.5|84|0.4|30|1 cup|Grains & starches|0
+Cereal, honey nut oat|383|7|80|5|37|1 cup|Grains & starches|0
+Granola|471|10|64|20|55|1/2 cup|Grains & starches|0
+Couscous, cooked|112|3.8|23.2|0.2|157|1 cup|Grains & starches|0
+White potato, baked|93|2.5|21.1|0.1|173|1 potato|Grains & starches|1
+Sweet potato, baked|90|2|20.7|0.2|151|1 potato|Grains & starches|1
+Mashed potatoes|113|2|16.9|4.2|210|1 cup|Grains & starches|0
+French fries, fast food|312|3.4|41|15|117|medium|Grains & starches|0
+Hash browns|265|3|35|12.5|100|1 cup|Grains & starches|0
+Tater tots|237|2.7|31|11.5|86|9 pieces|Grains & starches|0
+Black beans, cooked|132|8.9|23.7|0.5|172|1 cup|Legumes|1
+Pinto beans, cooked|143|9|26.2|0.7|171|1 cup|Legumes|1
+Refried beans|92|5.4|15.3|1.2|120|1/2 cup|Legumes|1
+Kidney beans, cooked|127|8.7|22.8|0.5|177|1 cup|Legumes|0
+Chickpeas, cooked|164|8.9|27.4|2.6|164|1 cup|Legumes|0
+Lentils, cooked|116|9|20.1|0.4|198|1 cup|Legumes|0
+Edamame, shelled, cooked|122|11.9|8.9|5.2|155|1 cup|Legumes|0
+Hummus|166|7.9|14.3|9.6|30|2 tbsp|Legumes|0
+Tofu, firm|144|15.8|4.3|8.7|85|3 oz|Legumes|0
+Peanut butter|588|25.1|20|50.4|32|2 tbsp|Legumes|1
+Almond butter|614|21|18.8|55.5|32|2 tbsp|Legumes|0
+Almonds|579|21.2|21.6|49.9|28|1 oz|Nuts, seeds & oils|1
+Walnuts|654|15.2|13.7|65.2|28|1 oz|Nuts, seeds & oils|0
+Cashews|553|18.2|30.2|43.9|28|1 oz|Nuts, seeds & oils|0
+Peanuts|567|25.8|16.1|49.2|28|1 oz|Nuts, seeds & oils|0
+Pistachios|560|20.2|27.2|45.3|28|1 oz|Nuts, seeds & oils|0
+Pecans|691|9.2|13.9|72|28|1 oz|Nuts, seeds & oils|0
+Chia seeds|486|16.5|42.1|30.7|28|1 oz|Nuts, seeds & oils|0
+Flax seeds, ground|534|18.3|28.9|42.2|14|2 tbsp|Nuts, seeds & oils|0
+Pumpkin seeds|559|30.2|10.7|49.1|28|1 oz|Nuts, seeds & oils|0
+Sunflower seeds|584|20.8|20|51.5|28|1 oz|Nuts, seeds & oils|0
+Olive oil|884|0|0|100|14|1 tbsp|Nuts, seeds & oils|1
+Avocado oil|884|0|0|100|14|1 tbsp|Nuts, seeds & oils|0
+Canola oil|884|0|0|100|14|1 tbsp|Nuts, seeds & oils|0
+Coconut oil|862|0|0|100|14|1 tbsp|Nuts, seeds & oils|0
+Mayonnaise|680|1|0.6|75|14|1 tbsp|Nuts, seeds & oils|0
+Cooking spray|0|0|0|0|1|1 spray|Nuts, seeds & oils|0
+Broccoli, cooked|35|2.4|7.2|0.4|156|1 cup|Vegetables|1
+Cauliflower, cooked|23|1.8|4.1|0.5|124|1 cup|Vegetables|0
+Spinach, raw|23|2.9|3.6|0.4|30|1 cup|Vegetables|1
+Spinach, cooked|23|3|3.8|0.3|180|1 cup|Vegetables|0
+Kale, raw|49|4.3|8.8|0.9|21|1 cup|Vegetables|-1
+Romaine lettuce|17|1.2|3.3|0.3|47|1 cup|Vegetables|0
+Mixed greens|20|1.8|2.9|0.3|56|2 cups|Vegetables|0
+Green beans, cooked|35|1.9|7.9|0.3|125|1 cup|Vegetables|0
+Asparagus, cooked|22|2.4|4.1|0.2|180|1 cup|Vegetables|0
+Brussels sprouts, roasted|56|3|8|2|156|1 cup|Vegetables|0
+Bell pepper, raw|31|1|6|0.3|119|1 pepper|Vegetables|-1
+Jalapeno, raw|29|0.9|6.5|0.4|14|1 pepper|Vegetables|-1
+Onion, raw|40|1.1|9.3|0.1|110|1 medium|Vegetables|-1
+Tomato, raw|18|0.9|3.9|0.2|123|1 medium|Vegetables|-1
+Cucumber|15|0.7|3.6|0.1|104|1 cup|Vegetables|0
+Carrot, raw|41|0.9|9.6|0.2|61|1 medium|Vegetables|-1
+Zucchini, cooked|17|1.2|3.1|0.3|180|1 cup|Vegetables|0
+Mushrooms, cooked|28|2.2|5.3|0.5|156|1 cup|Vegetables|0
+Corn, cooked|96|3.4|21|1.5|164|1 cup|Vegetables|0
+Peas, cooked|84|5.4|15.6|0.2|160|1 cup|Vegetables|0
+Cabbage, raw|25|1.3|5.8|0.1|89|1 cup|Vegetables|-1
+Celery|16|0.7|3|0.2|101|1 cup|Vegetables|0
+Avocado|160|2|8.5|14.7|68|1/2 avocado|Vegetables|1
+Salsa|36|1.5|7|0.2|32|2 tbsp|Vegetables|1
+Guacamole|150|2|8|13|30|2 tbsp|Vegetables|0
+Pico de gallo|25|1|5|0.2|30|2 tbsp|Vegetables|0
+Banana|89|1.1|22.8|0.3|118|1 medium|Fruit|1
+Apple|52|0.3|13.8|0.2|182|1 medium|Fruit|1
+Orange|47|0.9|11.8|0.1|131|1 medium|Fruit|0
+Strawberries|32|0.7|7.7|0.3|152|1 cup|Fruit|1
+Blueberries|57|0.7|14.5|0.3|148|1 cup|Fruit|0
+Raspberries|52|1.2|11.9|0.7|123|1 cup|Fruit|0
+Grapes|69|0.7|18.1|0.2|151|1 cup|Fruit|0
+Watermelon|30|0.6|7.6|0.2|152|1 cup|Fruit|0
+Pineapple|50|0.5|13.1|0.1|165|1 cup|Fruit|0
+Mango|60|0.8|15|0.4|165|1 cup|Fruit|0
+Peach|39|0.9|9.5|0.3|150|1 medium|Fruit|0
+Pear|57|0.4|15.2|0.1|178|1 medium|Fruit|0
+Cantaloupe|34|0.8|8.2|0.2|160|1 cup|Fruit|0
+Grapefruit|42|0.8|10.7|0.1|123|1/2 fruit|Fruit|0
+Raisins|299|3.1|79.2|0.5|28|1 oz|Fruit|0
+Dates, Medjool|277|1.8|75|0.2|24|1 date|Fruit|0
+Whey protein powder|380|78|8|4|31|1 scoop|Protein & bars|1
+Casein protein powder|360|75|8|3|33|1 scoop|Protein & bars|0
+Plant protein powder|375|70|10|6|33|1 scoop|Protein & bars|0
+Mass gainer powder|380|20|66|4|165|2 scoops|Protein & bars|0
+Protein bar, typical|350|29|38|10|60|1 bar|Protein & bars|0
+Quest bar|317|35|35|13.3|60|1 bar|Protein & bars|0
+Clif bar|383|15|65|8|68|1 bar|Protein & bars|0
+RXBAR|385|23|42|15|52|1 bar|Protein & bars|0
+Protein shake, ready to drink|63|10|3|1.2|325|1 bottle|Protein & bars|0
+Creatine monohydrate|0|0|0|0|5|1 scoop|Protein & bars|0
+Ketchup|101|1|25|0.1|17|1 tbsp|Condiments|0
+Mustard|66|3.7|5.8|3.4|5|1 tsp|Condiments|0
+Hot sauce|11|0.5|1.8|0.4|5|1 tsp|Condiments|0
+Soy sauce|53|8.1|4.9|0.6|16|1 tbsp|Condiments|0
+BBQ sauce|172|0.8|41|0.6|32|2 tbsp|Condiments|0
+Ranch dressing|430|1|6|45|30|2 tbsp|Condiments|0
+Italian dressing|292|0.4|10|28|30|2 tbsp|Condiments|0
+Caesar dressing|450|2|3|48|30|2 tbsp|Condiments|0
+Honey|304|0.3|82.4|0|21|1 tbsp|Condiments|0
+Maple syrup|260|0|67|0.1|20|1 tbsp|Condiments|0
+Sugar, granulated|387|0|100|0|4|1 tsp|Condiments|0
+Marinara sauce|56|1.6|8.5|1.8|125|1/2 cup|Condiments|0
+Alfredo sauce|180|3.5|5|16|60|1/4 cup|Condiments|0
+Coffee, black|2|0.3|0|0|240|1 cup|Drinks|1
+Espresso|9|0.1|1.7|0.2|30|1 shot|Drinks|0
+Tea, unsweetened|1|0|0.3|0|240|1 cup|Drinks|0
+Orange juice|45|0.7|10.4|0.2|248|1 cup|Drinks|0
+Beer, regular|43|0.5|3.6|0|355|12 oz|Drinks|0
+Beer, light|29|0.2|1.6|0|355|12 oz|Drinks|0
+Wine, red|85|0.1|2.6|0|148|5 oz|Drinks|0
+Liquor, 80 proof|231|0|0|0|44|1.5 oz|Drinks|0
+Soda, regular cola|41|0.1|10.6|0|355|12 oz|Drinks|0
+Soda, diet|0|0|0|0|355|12 oz|Drinks|0
+Sports drink|25|0|6.3|0|355|12 oz|Drinks|0
+Energy drink, sugar free|3|0|0.5|0|473|16 oz|Drinks|0
+Chipotle chicken burrito bowl|129|10|13.1|4.1|510|1 bowl|Restaurant|0
+Chipotle steak burrito bowl|135|9.8|13.1|4.9|510|1 bowl|Restaurant|0
+Chipotle chicken burrito|165|9.9|17.6|5.4|595|1 burrito|Restaurant|0
+Taco, beef, hard shell|218|11.5|16.7|12.8|78|1 taco|Restaurant|0
+Street taco, carne asada|212|15.3|17.6|8.2|85|1 taco|Restaurant|0
+Burrito, bean and cheese|192|6.6|27.8|5.6|198|1 burrito|Restaurant|0
+Quesadilla, cheese|330|15|28|18|150|1 quesadilla|Restaurant|0
+Enchilada, cheese|188|7.1|17.6|10|170|1 enchilada|Restaurant|0
+Tamale|250|8|25|13|100|1 tamale|Restaurant|0
+Cheeseburger, fast food|263|13.2|28.1|11.4|114|1 burger|Restaurant|0
+Big Mac|257|11.9|19.5|14.4|219|1 burger|Restaurant|0
+Chicken sandwich, grilled|205|18|22|4.5|200|1 sandwich|Restaurant|0
+Chicken sandwich, fried|290|14|27|14|220|1 sandwich|Restaurant|0
+Chicken nuggets|297|15|18|18|64|4 pieces|Restaurant|0
+Pizza, cheese|266|11|33|10|107|1 slice|Restaurant|0
+Pizza, pepperoni|298|13|34|12|111|1 slice|Restaurant|0
+Sub sandwich, turkey, 6 inch|160|10|22|3.5|219|1 sub|Restaurant|0
+Caesar salad with chicken|145|12|5|9|300|1 salad|Restaurant|0
+Sushi roll, California|130|4|22|2.5|170|1 roll|Restaurant|0
+Pho with beef|55|4.5|6.5|1.2|700|1 bowl|Restaurant|0
+Ramen, restaurant|110|6|13|4|600|1 bowl|Restaurant|0
+Pad thai|170|7|22|6|400|1 plate|Restaurant|0
+Potato chips|536|6.6|53|34.6|28|1 oz|Snacks & sweets|0
+Pretzels|380|10|80|3|28|1 oz|Snacks & sweets|0
+Popcorn, air popped|387|12.9|77.9|4.5|8|1 cup|Snacks & sweets|0
+Popcorn, microwave butter|500|9|55|28|30|1 cup|Snacks & sweets|0
+Crackers, saltine|421|9|72|11|16|5 crackers|Snacks & sweets|0
+Rice cake|387|8|82|2.8|9|1 cake|Snacks & sweets|0
+Ice cream, vanilla|207|3.5|23.6|11|66|1/2 cup|Snacks & sweets|0
+Chocolate, milk|535|7.6|59.4|29.7|43|1 bar|Snacks & sweets|0
+Chocolate, dark 70%|598|7.8|45.9|42.6|28|1 oz|Snacks & sweets|0
+Cookie, chocolate chip|488|5|65|23|16|1 cookie|Snacks & sweets|0
+Donut, glazed|452|4.9|51|25|60|1 donut|Snacks & sweets|0
+Brownie|466|6|60|22|56|1 brownie|Snacks & sweets|0
+Cake, frosted|389|3.5|56|17|80|1 slice|Snacks & sweets|0
+Gummy candy|350|5|82|0.1|40|1 pouch|Snacks & sweets|0
+Trail mix|462|13.8|44.9|29.4|40|1/4 cup|Snacks & sweets|0
+Jerky stick|340|18|4|28|28|1 stick|Snacks & sweets|0
+String cheese|300|24|2|22|28|1 stick|Snacks & sweets|0
+Hard boiled egg, packaged|143|12.6|0.7|9.5|50|1 egg|Snacks & sweets|0`;
+const FOODDB=FOODDB_RAW.split('\n').map(l=>{
+  const a=l.split('|');
+  return {name:a[0], per100:{cal:+a[1],p:+a[2],c:+a[3],f:+a[4]}, servingG:+a[5], servLabel:a[6], cat:a[7], prio:+a[8]||0};
+}).filter(x=>x.name);
+const FOODCATS=[...new Set(FOODDB.map(f=>f.cat))];
+
+/* rank: exact prefix beats word-start beats anywhere */
+function dbSearch(term,limit){
+  const q=term.trim().toLowerCase();
+  if(!q) return [];
+  const out=[];
+  for(const f of FOODDB){
+    const n=f.name.toLowerCase();
+    let sc=-1;
+    if(n===q) sc=0;
+    else if(n.startsWith(q)) sc=1;
+    else if(n.split(/[\s,]+/).some(w=>w.startsWith(q))) sc=2;
+    else if(n.includes(q)) sc=3;
+    if(sc>=0) out.push([sc*2-f.prio, n.length, f]);
+  }
+  out.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  return out.slice(0,limit||20).map(x=>x[2]);
+}
+function dbToFood(d){
+  return {id:uid(), code:'', name:d.name, brand:'',
+          per100:{...d.per100}, servingG:d.servingG, basis:'serving',
+          perServ:{cal:d.per100.cal*d.servingG/100, p:d.per100.p*d.servingG/100,
+                   c:d.per100.c*d.servingG/100, f:d.per100.f*d.servingG/100}};
+}
+function dbRow(d,i){
+  const sc=Math.round(d.per100.cal*d.servingG/100);
+  return '<button class="res" data-db="'+i+'"><b>'+esc(d.name)+'</b><small>'+sc+' cal per '+esc(d.servLabel)+
+         ' &middot; '+r0(d.per100.cal)+' cal / 100 g &middot; '+esc(d.cat)+'</small></button>';
 }
 
 /* ---------- OCR a nutrition label ---------- */
@@ -933,6 +1355,229 @@ const ml=document.createElement('link'); ml.rel='manifest';
 ml.href=URL.createObjectURL(new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}));
 document.head.appendChild(ml);
 
+/* ================= activity: steps, treadmill, workouts =================
+   Burn is computed NET of resting metabolism, i.e. the extra the session
+   cost on top of simply existing. That matters because the deficit adds
+   this on top of your daily burn (TDEE), which already includes resting.
+   Counting the gross figure the treadmill shows would double count it.
+   ACSM metabolic equations for walking and running; MET table otherwise. */
+const LB_KG=0.45359237;
+function bodyLb(k){
+  const ks=Object.keys(S.weights).filter(x=>x<=k).sort();
+  if(ks.length) return +S.weights[ks[ks.length-1]];
+  const any=Object.keys(S.weights).sort();
+  if(any.length) return +S.weights[any[0]];
+  return S.profile.startW>0 ? +S.profile.startW : 180;
+}
+const bodyKg=k=>bodyLb(k)*LB_KG;
+
+/* Treadmills disagree about what "incline" means. Most show percent GRADE
+   (rise divided by run, so 10% is a 10 ft climb over 100 ft of belt). Some
+   show DEGREES. The ACSM equation wants grade as a fraction, and the two
+   are not interchangeable: 6.67 degrees is an 11.7% grade, which costs
+   roughly three times what a flat walk does. */
+const gradeFrac=(v,unit)=> !(v>0) ? 0
+  : (unit==='deg' ? Math.tan(v*Math.PI/180) : v/100);
+const degToPct = d=> Math.tan(d*Math.PI/180)*100;
+
+/* ACSM: VO2 in ml/kg/min, including the 3.5 resting component. g is a fraction. */
+function treadVO2(mph,g){
+  const v=mph*26.8224;
+  return mph<4 ? 0.1*v + 1.8*v*(g||0) + 3.5
+               : 0.2*v + 0.9*v*(g||0) + 3.5;
+}
+/* net kcal: strip the resting 3.5 before converting. inc is the number the
+   console shows, unit says how to read it. */
+function treadCal(min,mph,inc,kg,unit){
+  if(!(min>0)||!(mph>0)) return 0;
+  const net=Math.max(0,treadVO2(mph,gradeFrac(inc,unit||'pct'))-3.5);
+  return Math.max(0, net*kg/1000*5*min);
+}
+const WORKOUTS=[
+  ['Weights, moderate',3.5],['Weights, heavy',6.0],['Circuit training',7.0],
+  ['Stair climber',9.0],['Elliptical',5.0],['Rowing machine',7.0],
+  ['Cycling, easy',5.8],['Cycling, hard',10.0],['Jump rope',11.0],
+  ['Walk, outdoors',3.5],['Hike',6.0],['Run, outdoors',9.8],
+  ['Swimming',7.0],['Basketball',6.5],['Soccer',7.0],
+  ['Yoga',2.5],['Stretching / mobility',2.3],['Yard work',4.0],
+  ['Other (moderate)',5.0],['Other (hard)',8.0]
+];
+/* net kcal from MET: (MET-1) strips resting */
+const metCal=(min,met,kg)=> (min>0&&met>0) ? Math.max(0,(met-1)*3.5*kg/200*min) : 0;
+
+const dayAct=k=> S.act[k]||(S.act[k]=[]);
+function sessionBurn(k){ return (S.act[k]||[]).reduce((a,e)=>a+(+e.cal||0),0); }
+
+/* Steps count toward burn. Converted to distance, then through the same
+   walking equation the treadmill uses, so the two are on one scale:
+   about 0.5 kcal per kg per km, the accepted figure for level walking. */
+const STEPS_PER_MILE=2000, CASUAL_MPH=2.8;
+function stepCal(n,kg){
+  if(!(n>0)) return 0;
+  const miles=n/STEPS_PER_MILE, min=miles/CASUAL_MPH*60;
+  return treadCal(min,CASUAL_MPH,0,kg,'pct');
+}
+/* Steps a logged session would already have put on a step counter. Only
+   subtracted when you say your counter is picking those sessions up, since
+   otherwise the treadmill and the step count are two separate things. */
+function sessionSteps(k){
+  return (S.act[k]||[]).reduce((a,e)=>{
+    const walky = e.t==='tread' || /^(Walk|Hike|Run)/i.test(e.name||'');
+    if(!walky) return a;
+    const miles = e.mph>0 ? e.mph*(e.min||0)/60 : (e.min||0)/60*3.0;
+    return a + miles*STEPS_PER_MILE;
+  },0);
+}
+function netSteps(k){
+  const raw=S.steps[k]||0;
+  return S.profile.stepsNet ? Math.max(0, raw-sessionSteps(k)) : raw;
+}
+function stepBurn(k){ return stepCal(netSteps(k), bodyKg(k)); }
+function dayBurn(k){ return sessionBurn(k)+stepBurn(k); }
+
+function renderMove(){
+  const k=day, kg=bodyKg(k);
+  const eaten=dayTotals(k).cal, sb=sessionBurn(k), stb=stepBurn(k), burned=sb+stb, net=eaten-burned;
+  const u=S.profile.usual;
+  $('#burnStats').innerHTML=
+    stat('Burned', r0(burned)+' cal', r0(sb)+' sessions + '+r0(stb)+' steps', burned>0?'good':'neutral')+
+    stat('Net calories', r0(net), 'ate '+r0(eaten)+', burned '+r0(burned), net<=S.goals.cal?'good':'bad')+
+    stat('Steps', (S.steps[k]||0).toLocaleString(), r0(stb)+' cal', (S.steps[k]||0)>=u.steps?'good':'neutral')+
+    stat('Sleep', (S.sleep[k]||0)>0 ? r1(S.sleep[k])+' h' : '--', (S.sleep[k]||0)>0 ? (S.sleep[k]<S.profile.sleepMin?'under your '+r1(S.profile.sleepMin)+' h':'clears '+r1(S.profile.sleepMin)+' h') : 'not logged', (S.sleep[k]||0)>0 ? (S.sleep[k]<S.profile.sleepMin?'bad':'good') : 'neutral')+
+    stat('Body weight', r1(bodyLb(k))+' lb', 'used for the estimates', 'neutral');
+
+  const iu=S.profile.inclineUnit, iLbl = iu==='deg' ? 'Incline (degrees)' : 'Incline (%)';
+  $('#tIncLbl').textContent=iLbl;
+  $('#uIncLbl').textContent='Usual '+iLbl.toLowerCase();
+  $('#incPct').classList.toggle('on',iu!=='deg');
+  $('#incDeg').classList.toggle('on',iu==='deg');
+  const incTxt = u.inc>0 ? ' on '+r2(u.inc)+(iu==='deg'?' deg':'%') : '';
+  $('#usualNote').textContent='One tap logs '+r0(u.steps).toLocaleString()+' steps, '+r0(u.min)+' min at '+r1(u.mph)+' mph'+incTxt+', and '+r1(u.sleep)+' h of sleep.';
+  $('#uSteps').value=u.steps; $('#uMin').value=u.min; $('#uMph').value=u.mph; $('#uInc').value=u.inc;
+  $('#uSleep').value=u.sleep; $('#uSleepMin').value=S.profile.sleepMin;
+
+  const sl=S.sleep[k]||0, need=S.profile.sleepMin;
+  $('#sleepIn').value = sl||'';
+  $('#sleepNote').textContent = sl>0
+    ? (sl<need ? r1(sl)+' h is under your '+r1(need)+' h minimum, so this day counts as a miss.'
+               : r1(sl)+' h clears your '+r1(need)+' h minimum.')
+    : 'Under '+r1(need)+' h makes the day a miss. Leave it blank on days you did not track it and it will not be held against you.';
+
+  $('#stepsAll').classList.toggle('on',!S.profile.stepsNet);
+  $('#stepsNet').classList.toggle('on',S.profile.stepsNet);
+  $('#stepsIn').value = S.steps[k]||'';
+  const raw=S.steps[k]||0, counted=netSteps(k), sess=sessionSteps(k);
+  $('#stepsNote').textContent = raw>0
+    ? (S.profile.stepsNet && sess>0
+        ? r0(counted).toLocaleString()+' of those '+r0(raw).toLocaleString()+' steps count, worth '+r0(stb)+' cal. The other '+r0(Math.min(raw,sess)).toLocaleString()+' are already paid for by the sessions you logged.'
+        : r0(raw).toLocaleString()+' steps, worth '+r0(stb)+' cal on top of your sessions.')
+    : 'Log your steps and they get added to your burn.';
+
+  const sel=$('#wType');
+  if(!sel.options.length){
+    sel.innerHTML=WORKOUTS.map((w,i)=>'<option value="'+i+'">'+esc(w[0])+'</option>').join('')+'<option value="custom">Something else</option>';
+  }
+  const es=(S.act[k]||[]);
+  $('#actCount').textContent=es.length?es.length+(es.length===1?' session':' sessions'):'';
+  $('#actList').innerHTML = es.length
+    ? es.map(e=>'<div class="item"><div class="t"><b>'+esc(e.name)+'</b><small>'+esc(e.detail||'')+'</small></div>'+
+        '<div class="kc num">'+r0(e.cal)+'</div>'+
+        '<button class="x" data-adel="'+e.id+'" aria-label="Remove '+esc(e.name)+'">&times;</button></div>').join('')
+    : '<div class="empty">No activity logged for this day. Add a treadmill session or a workout above.</div>';
+  $$('#actList [data-adel]').forEach(b=>b.onclick=()=>{
+    S.act[k]=(S.act[k]||[]).filter(x=>x.id!==b.dataset.adel);
+    save(); renderMove();
+  });
+  if(!$('#tMin').value) $('#tMin').value=u.min||'';
+  if(!$('#tMph').value) $('#tMph').value=u.mph||'';
+  if(!$('#tInc').value && u.inc) $('#tInc').value=u.inc;
+  previewTread(); previewWork();
+}
+function previewTread(){
+  const kg=bodyKg(day);
+  const un=S.profile.inclineUnit;
+  const min=+$('#tMin').value, mph=+$('#tMph').value, inc=+$('#tInc').value||0, ov=+$('#tCal').value;
+  const est=treadCal(min,mph,inc,kg,un);
+  const incTxt = inc>0 ? (un==='deg' ? ' and '+r2(inc)+' deg (a '+r1(degToPct(inc))+'% grade)' : ' and '+r2(inc)+'% grade') : '';
+  $('#tPrev').textContent = ov>0 ? 'Using your number: '+r0(ov)+' cal.'
+    : (est>0 ? r0(est)+' cal at '+r1(mph)+' mph'+incTxt+' for '+r0(min)+' min, at '+r1(bodyLb(day))+' lb.'
+             : 'Enter minutes and speed for an estimate.');
+}
+function previewWork(){
+  const kg=bodyKg(day), v=$('#wType').value, min=+$('#wMin').value, ov=+$('#wCal').value;
+  const custom = v==='custom';
+  $('#wNameWrap').classList.toggle('hide',!custom);
+  const met = custom ? 5.0 : WORKOUTS[+v][1];
+  const est=metCal(min,met,kg);
+  $('#wPrev').textContent = ov>0 ? 'Using your number: '+r0(ov)+' cal.'
+    : (est>0 ? r0(est)+' cal for '+r0(min)+' min at '+r1(met)+' METs, at '+r1(bodyLb(day))+' lb.'
+             : 'Pick a type and minutes for an estimate.');
+}
+function wireMove(){
+  ['#tMin','#tMph','#tInc','#tCal'].forEach(id=>$(id).addEventListener('input',previewTread));
+  ['#wMin','#wCal'].forEach(id=>$(id).addEventListener('input',previewWork));
+  $('#wType').addEventListener('change',previewWork);
+  $('#stepsIn').addEventListener('change',()=>{
+    const n=Math.max(0,r0(+$('#stepsIn').value));
+    if(n>0) S.steps[day]=n; else delete S.steps[day];
+    save(); renderMove();
+  });
+  $('#sleepIn').addEventListener('change',()=>{
+    const h=+$('#sleepIn').value;
+    if(h>0 && h<=24) S.sleep[day]=Math.round(h*4)/4; else delete S.sleep[day];
+    save(); renderMove();
+  });
+  $('#incPct').onclick=()=>{ S.profile.inclineUnit='pct'; save(); renderMove(); };
+  $('#incDeg').onclick=()=>{ S.profile.inclineUnit='deg'; save(); renderMove(); };
+  $('#stepsAll').onclick=()=>{ S.profile.stepsNet=false; save(); renderMove(); };
+  $('#stepsNet').onclick=()=>{ S.profile.stepsNet=true; save(); renderMove(); };
+  $('#saveUsual').onclick=()=>{
+    S.profile.usual={steps:Math.max(0,r0(+$('#uSteps').value)), min:Math.max(0,+$('#uMin').value||0),
+                     mph:Math.max(0,+$('#uMph').value||0), inc:Math.max(0,+$('#uInc').value||0),
+                     sleep:Math.max(0,+$('#uSleep').value||0)};
+    const sm=+$('#uSleepMin').value; if(sm>0&&sm<=24) S.profile.sleepMin=sm;
+    save(); renderMove();
+  };
+  $('#logUsual').onclick=()=>{
+    const uu=S.profile.usual, kg=bodyKg(day), un=S.profile.inclineUnit;
+    if(uu.steps>0) S.steps[day]=uu.steps;
+    if(uu.sleep>0 && !(S.sleep[day]>0)) S.sleep[day]=uu.sleep;
+    if(uu.min>0 && uu.mph>0){
+      const already=(S.act[day]||[]).some(e=>e.t==='tread' && e.min===uu.min && e.mph===uu.mph);
+      if(!already) dayAct(day).push({id:uid(), t:'tread', name:'Treadmill',
+        detail:r0(uu.min)+' min · '+r1(uu.mph)+' mph'+(uu.inc?' · '+r2(uu.inc)+(un==='deg'?' deg':'%')+' incline':'')+' · usual',
+        min:uu.min, mph:uu.mph, inc:uu.inc, incU:un, cal:r0(treadCal(uu.min,uu.mph,uu.inc,kg,un))});
+    }
+    save(); renderMove();
+  };
+  $('#addTread').onclick=()=>{
+    const kg=bodyKg(day);
+    const min=+$('#tMin').value, mph=+$('#tMph').value, inc=+$('#tInc').value||0, ov=+$('#tCal').value;
+    if(!(min>0)){ $('#tPrev').textContent='Enter how many minutes you were on it.'; return; }
+    if(!(mph>0) && !(ov>0)){ $('#tPrev').textContent='Enter a speed, or type the calories yourself.'; return; }
+    const un=S.profile.inclineUnit;
+    const cal = ov>0 ? ov : treadCal(min,mph,inc,kg,un);
+    dayAct(day).push({id:uid(), t:'tread', name:'Treadmill',
+      detail:r0(min)+' min'+(mph>0?' · '+r1(mph)+' mph':'')+(inc?' · '+r2(inc)+(un==='deg'?' deg':'%')+' incline':'')+(ov>0?' · your number':''),
+      min, mph, inc, incU:un, cal:r0(cal)});
+    $('#tMin').value=''; $('#tCal').value='';
+    save(); renderMove();
+  };
+  $('#addWork').onclick=()=>{
+    const kg=bodyKg(day), v=$('#wType').value, min=+$('#wMin').value, ov=+$('#wCal').value;
+    if(!(min>0)){ $('#wPrev').textContent='Enter how many minutes it took.'; return; }
+    const custom = v==='custom';
+    const met = custom ? 5.0 : WORKOUTS[+v][1];
+    const name = custom ? (($('#wName').value||'').trim()||'Workout') : WORKOUTS[+v][0];
+    const cal = ov>0 ? ov : metCal(min,met,kg);
+    dayAct(day).push({id:uid(), t:'work', name,
+      detail:r0(min)+' min'+(ov>0?' · your number':' · '+r1(met)+' METs'), min, met, cal:r0(cal)});
+    $('#wMin').value=''; $('#wCal').value=''; $('#wName').value='';
+    save(); renderMove();
+  };
+}
+wireMove();
+
 render();
 
 /* ================= progress dashboard ================= */
@@ -961,7 +1606,8 @@ function dayScore(k){
 }
 const isClean=s=>s.logged&&s.total>=70;
 function tdee(){ return S.profile.tdee>0 ? S.profile.tdee : S.goals.cal+Math.round(S.profile.rate*3500/7); }
-function dayDeficit(k){ const s=dayScore(k); return s.logged? tdee()-s.t.cal : 0; }
+function dayDeficit(k){ const s=dayScore(k); return s.logged? tdee()+dayBurn(k)-s.t.cal : 0; }
+
 
 /* ---- levels ---- */
 /* ---- levelling: one level per clean WEEK ----
@@ -972,6 +1618,7 @@ function dayDeficit(k){ const s=dayScore(k); return s.logged? tdee()-s.t.cal : 0
    just do not advance you. */
 const MISS_ALLOWED=2;
 const OVER_GRACE=1.02;          // 2% over target still counts as a hit
+const MAX_BREAK=3;              // more than this many misses in a row costs a level
 const RANKS=['Novice','Adept','Fighter','Warrior','Veteran','Champion','Master','Ascendant','Paragon','Apex'];
 
 function mondayOf(d){ const x=new Date(d); const g=(x.getDay()+6)%7; x.setDate(x.getDate()-g); return iso(x); }
@@ -985,7 +1632,46 @@ function dayMiss(k){
   const es=S.days[k]||[], t=dayTotals(k);
   if(!es.length || t.cal<300) return {miss:true, why:'not logged'};
   if(S.goals.cal && t.cal > S.goals.cal*OVER_GRACE) return {miss:true, why:'over target'};
+  /* Short sleep fails the day. Only when you actually logged it: the app
+     cannot tell a night you slept badly from a night you forgot to enter. */
+  const sl=S.sleep[k];
+  if(sl>0 && sl < S.profile.sleepMin) return {miss:true, why:'short sleep'};
   return {miss:false, why:'on target'};
+}
+
+/* ---- break runs ----
+   More than MAX_BREAK missed days back to back costs one level. Runs are
+   counted only over finished days, from the first day the app has anything
+   for, so the empty weeks before you started do not count against you. */
+function firstActiveDay(){
+  const ks=[...Object.keys(S.days).filter(k=>(S.days[k]||[]).length),
+            ...Object.keys(S.act).filter(k=>(S.act[k]||[]).length),
+            ...Object.keys(S.steps), ...Object.keys(S.sleep)].sort();
+  return ks.length? ks[0] : null;
+}
+function breakRuns(){
+  const start=firstActiveDay(); if(!start) return [];
+  const today=iso(new Date());
+  const runs=[]; let run=0, d=start, guard=0;
+  while(d<today && guard++<2000){
+    if(dayMiss(d).miss) run++;
+    else { if(run>MAX_BREAK) runs.push(run); run=0; }
+    const n=new Date(d+'T12:00'); n.setDate(n.getDate()+1); d=iso(n);
+  }
+  if(run>MAX_BREAK) runs.push(run);
+  return runs;
+}
+/* how many finished days you are currently in the hole for */
+function currentBreak(){
+  const start=firstActiveDay(); if(!start) return 0;
+  const today=iso(new Date());
+  let n=0, d=iso(new Date(Date.now()-864e5));
+  while(d>=start && n<400){
+    if(!dayMiss(d).miss) break;
+    n++;
+    const x=new Date(d+'T12:00'); x.setDate(x.getDate()-1); d=iso(x);
+  }
+  return n;
 }
 function weekStats(mon){
   const days=weekDays(mon), today=iso(new Date());
@@ -1010,10 +1696,15 @@ function allWeeks(){
 function levelInfo(){
   const weeks=allWeeks();
   const cleared=weeks.filter(w=>w.passed && w.touched).length;
-  const level=cleared+1;
+  const runs=breakRuns();
+  const lost=runs.length;
+  const level=Math.max(1, cleared+1-lost);
   const thisWeek=weekStats(mondayOf(new Date()));
   const left=Math.max(0,MISS_ALLOWED-thisWeek.misses);
-  return {level, cleared, rank:RANKS[Math.min(level,RANKS.length)-1], thisWeek, left,
+  const brk=currentBreak();
+  return {level, cleared, lost, runs, brk,
+          atRisk: MAX_BREAK-brk,                     // finished days before the next demotion
+          rank:RANKS[Math.min(level,RANKS.length)-1], thisWeek, left,
           onTrack: thisWeek.misses<=MISS_ALLOWED};
 }
 function currentStreak(){
@@ -1182,9 +1873,14 @@ function renderProgress(){
   $('#xpBar').style.width=(used/(MISS_ALLOWED+1))*100+'%';
   $('#xpBar').style.background = li.thisWeek.misses>MISS_ALLOWED ? 'var(--fat)'
       : (li.thisWeek.misses===MISS_ALLOWED ? 'var(--cal)' : 'var(--pro)');
-  $('#xpTxt').textContent = li.thisWeek.misses>MISS_ALLOWED
-      ? 'Week missed by '+(li.thisWeek.misses-MISS_ALLOWED)+'. Resets Monday.'
-      : (li.left===0 ? 'No misses left this week' : li.left+(li.left===1?' miss':' misses')+' left this week');
+  $('#xpTxt').textContent = li.brk>MAX_BREAK
+      ? li.brk+' days broken. That has already cost a level.'
+      : (li.brk>0
+          ? li.brk+(li.brk===1?' day':' days')+' broken, '+li.atRisk+' more costs a level'
+          : (li.thisWeek.misses>MISS_ALLOWED
+              ? 'Week missed by '+(li.thisWeek.misses-MISS_ALLOWED)+'. Resets Monday.'
+              : (li.left===0 ? 'No misses left this week' : li.left+(li.left===1?' miss':' misses')+' left this week')));
+  $('#rankName').textContent = li.lost ? li.rank+' · -'+li.lost : li.rank;
   drawSprite();
 
   const scored=keys.map(dayScore);
@@ -1193,6 +1889,10 @@ function renderProgress(){
   const totalCal=scored.reduce((a,s)=>a+s.t.cal,0);
   const avgCal=loggedDays?Math.round(totalCal/loggedDays):0;
   const deficit=keys.reduce((a,k)=>a+dayDeficit(k),0);
+  const burnWin=keys.reduce((a,k)=>a+dayBurn(k),0);
+  const actDays=keys.filter(k=>(S.act[k]||[]).length>0).length;
+  const stepWin=keys.reduce((a,k)=>a+(S.steps[k]||0),0);
+  const stepDays=keys.filter(k=>(S.steps[k]||0)>0).length;
   const projLb=deficit/3500;
   const streak=currentStreak();
 
@@ -1203,10 +1903,13 @@ function renderProgress(){
   $('#statGrid').innerHTML=
     stat('Clean days', cleanDays+' / '+n, loggedDays+' days logged', cleanDays>=n*0.7?'good':(cleanDays>=n*0.4?'warn':'bad'))+
     stat('Week streak', streak+(streak===1?' week':' weeks'), streak>0?'clean weeks in a row':'clear a week to start one', streak>=2?'good':'neutral')+
+    stat('Levels lost', li.lost, li.lost?li.lost+(li.lost===1?' break of ':' breaks of ')+'over '+MAX_BREAK+' days':'no break over '+MAX_BREAK+' days', li.lost?'bad':'good')+
     stat('Avg calories', loggedDays?r0(avgCal):'--', 'target '+r0(S.goals.cal), !loggedDays?'neutral':(avgCal>S.goals.cal*1.05?'bad':'good'))+
     stat(deficit>=0?'Deficit':'Surplus', r0(Math.abs(deficit))+' cal',
-         (deficit>=0?'about '+r1(projLb)+' lb of loss':'about '+r1(Math.abs(projLb))+' lb gained'),
-         deficit>=0?'good':'bad');
+         (deficit>=0?'about '+r1(projLb)+' lb of loss':'about '+r1(Math.abs(projLb))+' lb gained')+(burnWin>0?', workouts included':''),
+         deficit>=0?'good':'bad')+
+    stat('Burned', r0(burnWin)+' cal', 'sessions and steps together', burnWin>0?'good':'neutral')+
+    stat('Steps', stepWin.toLocaleString(), stepDays?'over '+stepDays+(stepDays===1?' day':' days'):'none logged', stepWin>=S.profile.usual.steps*Math.max(1,stepDays)?'good':'neutral');
 
   $('#cardCals').innerHTML='<h3>Calories vs target</h3><div class="sub">Dashed line is your '+r0(S.goals.cal)+' cal target. Green is at or under it, red is over, grey days were not logged.</div>'+calBars(keys);
 
@@ -1219,10 +1922,12 @@ function renderProgress(){
 
   let bbody;
   if(progMode==='week'){
-    bbody='<h3>Day by day</h3><div class="sub">Score blends calories (45%), protein (35%) and how close carbs and fat land (20%).</div>';
-    keys.forEach(k=>{ const s=dayScore(k);
-      bbody+='<div class="rowline"><span>'+shortDate(k)+(k===iso(new Date())?' · today':'')+'</span>'+
-        (s.logged?'<b class="'+(isClean(s)?'good':(s.total>=45?'warn':'bad'))+'">'+s.total+'</b>':'<b style="color:var(--dim)">not logged</b>')+'</div>';
+    bbody='<h3>Day by day</h3><div class="sub">Score blends calories (45%), protein (35%) and how close carbs and fat land (20%). A day is a miss if you went over target, never logged, or slept under '+r1(S.profile.sleepMin)+' h.</div>';
+    keys.forEach(k=>{ const s=dayScore(k), m=dayMiss(k);
+      const tag = m.miss ? '<b class="bad">'+esc(m.why)+'</b>'
+                         : (s.logged?'<b class="'+(isClean(s)?'good':(s.total>=45?'warn':'bad'))+'">'+s.total+'</b>':'<b style="color:var(--dim)">not logged</b>');
+      bbody+='<div class="rowline"><span>'+shortDate(k)+(k===iso(new Date())?' · today':'')+
+        ((S.sleep[k]||0)>0?' · '+r1(S.sleep[k])+'h':'')+'</span>'+tag+'</div>';
     });
   } else {
     bbody='<h3>The month</h3><div class="sub">Each square is a day. Brighter means a better score.</div>'+heatmap(alignedMonthKeys());
