@@ -131,7 +131,7 @@ input:focus{border-color:var(--cal)}
 .segwrap button{flex:1; padding:9px 0; border-radius:10px; font-size:.85rem; color:var(--dim)}
 .segwrap button.on{background:var(--panel2); color:var(--text)}
 .hero2{display:flex; gap:16px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:20px; padding:16px; margin-bottom:12px}
-#sprite{width:84px; height:126px; image-rendering:pixelated; image-rendering:crisp-edges; flex:none; background:radial-gradient(ellipse at 50% 70%, rgba(226,116,140,.16), transparent 70%)}
+#sprite,#spriteImg{width:84px; height:126px; object-fit:contain; image-rendering:pixelated; image-rendering:crisp-edges; flex:none; background:radial-gradient(ellipse at 50% 70%, rgba(226,116,140,.16), transparent 70%)}
 .lvl{flex:1; min-width:0}
 .lvl b{display:block; font-size:1.15rem; font-weight:600}
 .lvl .rank{color:var(--cal); font-size:.8rem; font-weight:500; letter-spacing:.04em; text-transform:uppercase}
@@ -241,7 +241,8 @@ input:focus{border-color:var(--cal)}
     <button id="segMonth">This month</button>
   </div>
   <div class="hero2">
-    <canvas id="sprite" width="32" height="48" aria-label="Your warrior"></canvas>
+    <canvas id="sprite" width="32" height="48" aria-label="Your fighter"></canvas>
+    <img id="spriteImg" alt="Your fighter" hidden>
     <div class="lvl">
       <span class="rank" id="rankName">Novice</span>
       <b id="lvlNum">Level 1</b>
@@ -344,7 +345,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-09-08.7';
+const APP_VERSION='2026-09-20.1';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -963,35 +964,65 @@ function tdee(){ return S.profile.tdee>0 ? S.profile.tdee : S.goals.cal+Math.rou
 function dayDeficit(k){ const s=dayScore(k); return s.logged? tdee()-s.t.cal : 0; }
 
 /* ---- levels ---- */
-const LEVELS=[0,40,100,180,280,400,550,730,950,1200];
+/* ---- levelling: one level per clean WEEK ----
+   A week passes if you miss no more than MISS_ALLOWED days of your calorie
+   target. A miss is a day you went over target, or a day you never logged
+   (an unlogged day cannot be counted as a hit). Weeks run Monday to Sunday
+   and only count once they are finished. Bad weeks cost you nothing, they
+   just do not advance you. */
+const MISS_ALLOWED=2;
+const OVER_GRACE=1.02;          // 2% over target still counts as a hit
 const RANKS=['Novice','Adept','Fighter','Warrior','Veteran','Champion','Master','Ascendant','Paragon','Apex'];
-function xpTotal(){
-  let xp=0,streak=0;
-  for(const k of Object.keys(S.days).sort()){
-    const s=dayScore(k);
-    if(s.logged){ xp+=Math.round(s.total/10); if(isClean(s)){ streak++; if(streak>2) xp+=2; } else streak=0; }
-    else streak=0;
-    if(S.weights[k]) xp+=2;
+
+function mondayOf(d){ const x=new Date(d); const g=(x.getDay()+6)%7; x.setDate(x.getDate()-g); return iso(x); }
+function weekDays(mon){
+  const out=[], s=new Date(mon+'T12:00');
+  for(let i=0;i<7;i++){ const d=new Date(s); d.setDate(s.getDate()+i); out.push(iso(d)); }
+  return out;
+}
+/* why a given day counts against you, or does not */
+function dayMiss(k){
+  const es=S.days[k]||[], t=dayTotals(k);
+  if(!es.length || t.cal<300) return {miss:true, why:'not logged'};
+  if(S.goals.cal && t.cal > S.goals.cal*OVER_GRACE) return {miss:true, why:'over target'};
+  return {miss:false, why:'on target'};
+}
+function weekStats(mon){
+  const days=weekDays(mon), today=iso(new Date());
+  const past=days.filter(k=>k<=today);
+  let misses=0, hits=0;
+  past.forEach(k=>{ dayMiss(k).miss ? misses++ : hits++; });
+  const complete = days[6] < today;
+  return {mon, days, past, misses, hits, complete,
+          touched: days.some(k=>(S.days[k]||[]).length>0),
+          passed: complete && misses<=MISS_ALLOWED};
+}
+function allWeeks(){
+  const keys=Object.keys(S.days).filter(k=>(S.days[k]||[]).length).sort();
+  if(!keys.length) return [];
+  const out=[]; let cur=mondayOf(keys[0]+'T12:00'); const stop=mondayOf(new Date());
+  for(let i=0;i<260 && cur<=stop;i++){
+    out.push(weekStats(cur));
+    const n=new Date(cur+'T12:00'); n.setDate(n.getDate()+7); cur=iso(n);
   }
-  return xp;
+  return out;
 }
 function levelInfo(){
-  const xp=xpTotal(); let l=1;
-  for(let i=0;i<LEVELS.length;i++) if(xp>=LEVELS[i]) l=i+1;
-  const cur=LEVELS[l-1], next=LEVELS[l];
-  return {xp,level:l,rank:RANKS[l-1],cur,next,pct: next? clamp((xp-cur)/(next-cur)*100,0,100):100};
+  const weeks=allWeeks();
+  const cleared=weeks.filter(w=>w.passed && w.touched).length;
+  const level=cleared+1;
+  const thisWeek=weekStats(mondayOf(new Date()));
+  const left=Math.max(0,MISS_ALLOWED-thisWeek.misses);
+  return {level, cleared, rank:RANKS[Math.min(level,RANKS.length)-1], thisWeek, left,
+          onTrack: thisWeek.misses<=MISS_ALLOWED};
 }
 function currentStreak(){
+  const weeks=allWeeks().filter(w=>w.complete && w.touched);
   let n=0;
-  for(let i=0;i<400;i++){
-    const k=keyBack(i), s=dayScore(k);
-    if(i===0 && !s.logged) continue;      // today may simply not be finished yet
-    if(isClean(s)) n++; else break;
-  }
+  for(let i=weeks.length-1;i>=0;i--){ if(weeks[i].passed) n++; else break; }
   return n;
 }
 
-/* ---- the warrior: original pixel sprite, gains gear as the level climbs ---- */
 const SPAL={"K":"#080C11","S":"#EFAE7E","s":"#C07C4F","L":"#FFD2AC","H":"#DCE6F0","h":"#93A7BC","I":"#FFFFFF","T":"#3C5670","t":"#26384B","U":"#587a99","P":"#2B3A4A","p":"#1B2632","Q":"#3E5468","B":"#C6402F","b":"#8E2A1E","N":"#EE5A45","W":"#E4E9EE","w":"#A8B4C0","V":"#FFFFFF","E":"#1B2632","a":"#F5C542","A":"#FFE9A8","O":"#FFFFFF"};
 const SPRITES=[
 [ '........KhK...KhK....KhK........','...K.....K.....KK....KhK........','..KhK......K...KhK..KIhK........','...KhK....KhK..KhK..KIhK....K...','....KhKK...K...KIhKKIHhK...KhK..','.....KhhK....KKKIhKKIhK..KKhK...','......KhhK..KIIIHHIIHhKKKIhK....','.......KhhKKIHHHHHHHHhKIIhK.....','........KhIIHHHHHHHHHHIHhK......','.........KhHHHHHHHHHHHHhK.......','..........KIHHHHhHHHHHhK........','..........KhHHhhshhHhhK.........','...........KhhLLSLshshK.........','............KLESSSEsKK..........','............KLSSSSSsK...........','............KsSSSSSsK...........','.............KsSSSsK............','.............KKLSsKK............','...........KKLLSSSLsKK..........','..........KLLSSSSSSSLsK.........','..........KLSSSSSSSSSsK.........','.........KLSSSSSSSSSSSsK........','.........KLSSSSSSSSSSSSsK.......','........KLSSSSSSSSSSSSsSsK......','.......KLSSSSSSSSSSSSsKsSsK.....','.......KLSSSSSSSSSSSSsKKsSsK....','.......KLSssssSSSSSsssK.KLSsK...','......KLSsKKKKsssssKKK.KLSsK....','.....KLSsK..KQQQQQQpK..KLSsK....','.....KLSsK..KQPPPPPpK.KLSsK.....','.....KLSsK.KQPPPPPPpK.KLSsK.....','.....KsSsK.KQPPpppPpKKsSsK......','......KLSsKKQPpKKKQPpKKsK.......','......KsSsKQPpK..KQPpK.K........','.......KsKKQPpK..KpPpK..........','........K.KQPpK...KQPpK.........','..........KQPpK...KQPpK.........','..........KQPpK...KpPpK.........','..........KQPpK....KQPpK........','.........KQPpK.....KpPpK........','.........KpppK......KpppKK......','........KNNNNbK.....KNNNNbK.....','........KNBBBbK.....KNBBBbK.....','........KNBBBbK.....KNBBBbK.....','........KbbbbbK.....KbbbbbK.....','.........KKKKK.......KKKKK......','................................','................................' ],
@@ -1000,27 +1031,37 @@ const SPRITES=[
 [ '........KhK...KhK....KhK........','...K.....K.....KK....KhK........','..KhK...aa.K...KhK..KIhKa.......','...KhK..aaKhK..KhK..KIhKa...K...','....KhKK.aaK...KIhKKIHhK...KhK..','.....KhhK.a..KKKIhKKIhKaaKKhK...','......KhhK..KIIIHHIIHhKKKIhK....','.......KhhKKIHHHHHHHHhKIIhK.....','........KhIhhhhhhhhhhhIHhK......','.........KhNNNNNNNNNNbIhK.......','..........KbbbbbbbbbbbhK........','..........KhIIhhshhIhhK.........','...........KhhLLSLshshK.........','............KLESSSEsKK..........','...aaa......KLSSSSSsK....a.aaa..','..a.aaa.....KsSSSSSsK....aa.aa..','..aa.aa......KsSSSsK.....aaa.a..','..aaa.a......KKLSsKK......aaa...','...aaa.....KKUtLSsUtKK...a.aaa..','..a.aaa...KtUTtLSsUTUtK..aa.aa..','..aa.aa...KstTtsSsUTtsK..aaa.a..','..aaa.a..KLSsUTtsUTtsSsK..aaa...','...aaa...KLSsUTTUTTTtsSsK..aa...','....aa..KLSsUTTTTTTTTtsSsKa.a...','...a.a.KLSsUTTTTTTTTTtKsSsKa....','...aa..KLSsUttttttttttKKsSsKa...','...aaa.KLSstNNNNNNNNbtK.KsSsK...','....aaKLSsKKNBBBBBBBbK.KswsKa...','...a.KLSsK.KbbbbbbbbbK.KVWwK....','...aaKLssK..KQQQQQQpK.KVWwKaa...','...aaKswsK.KQPPPPPPpK.KVWwKaa...','....aKVWwK.KQPPpppPpKKwWwKa.a...','...a.KwWwsKKQPpKKKQPpKKwK.aa....','...aa.KwWwKQPpK..KQPpK.K..aaa...','...aaa.KwKKQPpK..KpPpK.....aa...','....aa..K.KQPpK...KQPpK...a.a...','...a.a....KQPpK...KQPpK...aa....','....a.....KQPpK...KpPpK....a....','....a.....KQPpK....KQPpK...a....','....a....KQPpK.....KpPpK........','.........KpppK......KpppKK.a....','....a...KNNNNbK.....KNNNNbKa....','....a...KNBBBbK.....KNBBBbKa....','....a...KNBBBbK.....KNBBBbK.....','........KbbbbbK.....KbbbbbK.....','.........KKKKK.......KKKKK......','................................','................................' ],
 [ '........KhK...KhKAA..KhK........','...K.....K....AKK.A..KhK........','..KhK...aa.K...KhK..KIhKa.......','...KhK..aaKhK..KhK..KIhKa...K...','....KhKK.aaK...KIhKKIHhK.AAKhK..','.....KhhK.a..KKKIhKKIhKaaKKhK...','.....AKhhK..KIIIHHIIHhKKKIhK....','.....AAKhhKKIHHHHHHHHhKIIhK.....','.....AAAKhIhhhhhhhhhhhIHhKAA....','......A..KhNNNNNNNNNNbIhK.A.....','AA.AA.....KbbbbbbbbbbbhK...AAA.A','AAA.A.A...KhIIhhshhIhhK...A.AAA.','.AAA..A....KhhLLSLshshK...AA.AAA','A.AAA.A.....KLESSSEsKK....AAA.AA','AA.aaa......KLSSSSSsK....a.aaa.A','AAa.aaa.....KsSSSSSsK....aa.aaA.','.Aaa.aa......KsSSSsK.....aaa.aAA','A.aaa.a......KKLSsKK......aaa.AA','AA.aaa.....KKUtLSsUtKK...a.aaa.A','AAa.aaa...KtUTtLSsUTUtK..aa.aaA.','.Aaa.aa...KstTtsSsUTtsK..aaa.aA.','..aaa.a..KLSsUTtsUTtsSsK..aaa.A.','.A.aaa...KLSsUTTUTTTtsSsK..aaA..','.AA.aa..KLSsUTTTTTTTTtsSsKa.aAA.','.AAa.a.KLSsUTTTTTTTTTtKsSsKa.AA.','..Aaa..KLSsUttttttttttKKsSsKa.A.','.A.aaa.KLSstNNNNNNNNbtK.KsSsKA..','.AA.aaKLSsKKNBBBBBBBbK.KswsKaAA.','.AAa.KLSsK.KbbbbbbbbbK.KVOOO.AA.','..AaaKLssK..KQQQQQQpK.KVOOOOO.A.','.A.aaKswsK.KQPPPPPPpK.KVOOOOOA..','.AA.aKVWwK.KQPPpppPpKKwWOOOOOAA.','.AAa.KwWwsKKQPpKKKQPpKKwKOOO.AA.','..Aaa.KwWwKQPpK..KQPpK.K..aaa.A.','.A.aaa.KwKKQPpK..KpPpK.....aaA..','.AA.aa..K.KQPpK...KQPpK...a.aAA.','.AAa.a....KQPpK...KQPpK...aa.AA.','..A.a.....KQPpK...KpPpK....a....','....a.....KQPpK....KQPpK...a.A..','..A.a....KQPpK.....KpPpK.....A..','..A......KpppK......KpppKK.a.A..','..A.a...KNNNNbK.....KNNNNbKa....','....a...KNBBBbK.....KNBBBbKa.A..','..A.a...KNBBBbK.....KNBBBbK..A..','..A.....KbbbbbK.....KbbbbbK..A..','..A......KKKKK.......KKKKK......','................................','................................' ]
 ];
-/* Drops in a real sprite sheet when one exists: put a warrior.png next to
-   index.html, five equal frames side by side, lowest tier first. Without it
-   the built-in drawn sprite is used. */
-let sheet=null, sheetOk=false;
-(function(){ const im=new Image();
-  im.onload=()=>{ if(im.width>=5&&im.height>0){ sheet=im; sheetOk=true; drawSprite(); } };
-  im.onerror=()=>{ sheetOk=false; };
-  im.src='warrior.png'; })();
-function spriteTier(){ return clamp(Math.floor((levelInfo().level-1)/2),0,4); }
+/* Level artwork. Drop lvl1.png, lvl2.png, lvl3.png ... next to index.html and
+   the app uses them instead of the drawn sprite. It probes upward from lvl1
+   and stops at the first one that is missing, so add as many as you like.
+   Past the last image you own, the highest one keeps showing. */
+const MAX_LEVEL_ART=40;
+let lvlArt=[], artProbed=false;
+function loadImg(src){
+  return new Promise(res=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=()=>res(null); im.src=src; });
+}
+async function probeLevelArt(){
+  const found=[];
+  for(let i=1;i<=MAX_LEVEL_ART;i++){
+    const im=await loadImg('lvl'+i+'.png');
+    if(!im) break;
+    found.push(im);
+  }
+  lvlArt=found; artProbed=true;
+  drawSprite();
+}
 function drawSprite(){
-  const cv=$('#sprite'); if(!cv) return;
-  const tier=spriteTier(), ctx=cv.getContext('2d');
-  if(sheetOk&&sheet){
-    const fw=Math.floor(sheet.width/5), fh=sheet.height;
-    if(cv.width!==fw||cv.height!==fh){ cv.width=fw; cv.height=fh; }
-    ctx.imageSmoothingEnabled=false;
-    ctx.clearRect(0,0,fw,fh);
-    ctx.drawImage(sheet, tier*fw,0, fw,fh, 0,0, fw,fh);
+  const cv=$('#sprite'), el=$('#spriteImg');
+  if(!cv||!el) return;
+  const lvl=levelInfo().level;
+  if(lvlArt.length){
+    const art=lvlArt[Math.min(lvl,lvlArt.length)-1];
+    el.src=art.src; el.hidden=false; cv.hidden=true;
     return;
   }
-  const grid=SPRITES[tier];
+  el.hidden=true; cv.hidden=false;
+  const tier=clamp(Math.floor((lvl-1)/2),0,SPRITES.length-1);
+  const grid=SPRITES[tier], ctx=cv.getContext('2d');
   if(cv.width!==grid[0].length||cv.height!==grid.length){ cv.width=grid[0].length; cv.height=grid.length; }
   ctx.clearRect(0,0,cv.width,cv.height);
   for(let y=0;y<grid.length;y++){
@@ -1137,8 +1178,13 @@ function renderProgress(){
   const li=levelInfo();
   $('#rankName').textContent=li.rank;
   $('#lvlNum').textContent='Level '+li.level;
-  $('#xpBar').style.width=li.pct+'%';
-  $('#xpTxt').textContent = li.next ? (li.xp+' XP  ·  '+(li.next-li.xp)+' to level '+(li.level+1)) : (li.xp+' XP  ·  max rank');
+  const used=Math.min(li.thisWeek.misses,MISS_ALLOWED+1);
+  $('#xpBar').style.width=(used/(MISS_ALLOWED+1))*100+'%';
+  $('#xpBar').style.background = li.thisWeek.misses>MISS_ALLOWED ? 'var(--fat)'
+      : (li.thisWeek.misses===MISS_ALLOWED ? 'var(--cal)' : 'var(--pro)');
+  $('#xpTxt').textContent = li.thisWeek.misses>MISS_ALLOWED
+      ? 'Week missed by '+(li.thisWeek.misses-MISS_ALLOWED)+'. Resets Monday.'
+      : (li.left===0 ? 'No misses left this week' : li.left+(li.left===1?' miss':' misses')+' left this week');
   drawSprite();
 
   const scored=keys.map(dayScore);
@@ -1156,7 +1202,7 @@ function renderProgress(){
 
   $('#statGrid').innerHTML=
     stat('Clean days', cleanDays+' / '+n, loggedDays+' days logged', cleanDays>=n*0.7?'good':(cleanDays>=n*0.4?'warn':'bad'))+
-    stat('Streak', streak+(streak===1?' day':' days'), streak>0?'keep it alive':'start one today', streak>=3?'good':'neutral')+
+    stat('Week streak', streak+(streak===1?' week':' weeks'), streak>0?'clean weeks in a row':'clear a week to start one', streak>=2?'good':'neutral')+
     stat('Avg calories', loggedDays?r0(avgCal):'--', 'target '+r0(S.goals.cal), !loggedDays?'neutral':(avgCal>S.goals.cal*1.05?'bad':'good'))+
     stat(deficit>=0?'Deficit':'Surplus', r0(Math.abs(deficit))+' cal',
          (deficit>=0?'about '+r1(projLb)+' lb of loss':'about '+r1(Math.abs(projLb))+' lb gained'),
@@ -1243,6 +1289,7 @@ $('#saveProfile').onclick=saveProfile;
 fillProfile();
 bootRestore();
 checkUpdate();
+probeLevelArt();
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(); });
 
 </script>
