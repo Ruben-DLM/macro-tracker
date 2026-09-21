@@ -200,9 +200,20 @@ input:focus,select:focus{border-color:var(--cal)}
 </main>
 
 <main class="wrap hide" id="viewFoods">
-  <label class="fld" style="margin-top:14px"><span>Search your saved foods</span>
-    <input type="search" id="libSearch" placeholder="Chicken breast, protein bar..."></label>
-  <div id="libList"></div>
+  <div class="segwrap">
+    <button id="segLib" class="on">Saved foods</button>
+    <button id="segRec">My recipes</button>
+  </div>
+  <div id="libPane">
+    <label class="fld"><span>Search your saved foods</span>
+      <input type="search" id="libSearch" placeholder="Chicken breast, protein bar..."></label>
+    <div id="libList"></div>
+  </div>
+  <div id="recPane" class="hide">
+    <p class="note">Build a meal once from your own ingredients and amounts, then log it in one tap. Better than a generic entry because the numbers are how <em>you</em> make it.</p>
+    <button class="primary" id="newRecipe">New recipe</button>
+    <div id="recList"></div>
+  </div>
 </main>
 
 <main class="wrap hide" id="viewGoals">
@@ -349,7 +360,7 @@ const store={
 const DEF={
   goals:{cal:2200,p:180,c:200,f:65},
   days:{}, library:{}, weights:{},
-  act:{}, steps:{}, sleep:{},
+  act:{}, steps:{}, sleep:{}, recipes:[],
   profile:{startW:0, goalW:0, rate:1.75, tdee:0,
            usual:{steps:3000, min:40, mph:3.2, inc:0, sleep:7.5},
            stepsNet:false, inclineUnit:'pct', sleepMin:7}
@@ -360,7 +371,7 @@ S.goals=Object.assign({},DEF.goals,S.goals||{});
 S.profile=Object.assign({},DEF.profile,S.profile||{});
 S.days=S.days||{}; S.library=S.library||[]; S.weights=S.weights||{};
 S.act=S.act||{}; S.steps=S.steps||{};   /* added 2026-09-20: activity log + daily step count */
-S.sleep=S.sleep||{};
+S.sleep=S.sleep||{}; S.recipes=S.recipes||[];
 S.profile.usual=Object.assign({steps:3000,min:40,mph:3.2,inc:0,sleep:7.5},S.profile.usual||{});
 if(typeof S.profile.stepsNet!=='boolean') S.profile.stepsNet=false;
 if(S.profile.inclineUnit!=='deg') S.profile.inclineUnit='pct';
@@ -425,7 +436,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-09-21.1';
+const APP_VERSION='2026-09-21.2';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -521,7 +532,7 @@ $$('nav button').forEach(b=>b.onclick=()=>{
   $('#viewMove').classList.toggle('hide',tab!=='move');
   $('#dateHdr').classList.toggle('hide',tab!=='today'&&tab!=='move');
   if(tab==='today') render();
-  if(tab==='foods') renderLib();
+  if(tab==='foods'){ $('#recPane').classList.contains('hide') ? renderLib() : renderRecipes(); }
   if(tab==='progress') renderProgress();
   if(tab==='move') renderMove();
 });
@@ -537,10 +548,12 @@ function openAdd(){
   <button class="action" id="aLabel"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span><b>Snap a nutrition label</b><small>Reads the panel and fills the numbers in</small></span></button>
   <button class="action" id="aType"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 11h.01M11 11h.01M15 11h.01M7 14h10"/></svg><span><b>Type a barcode number</b><small>The digits printed under the bars</small></span></button>
   <button class="action" id="aSearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span><b>Search by name</b><small>Open Food Facts database</small></span></button>
+  <button class="action" id="aRecipe"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span><b>One of my recipes</b><small>Meals you already built</small></span></button>
   <button class="action" id="aManual"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 16l9.5-9.5a2.1 2.1 0 013 3L9 19l-4 1z"/></svg><span><b>Enter it manually</b><small>Type calories and macros</small></span></button>`);
   $('#aType').onclick=typeCodeUI;
   $('#aScan').onclick=liveScan; $('#aPhotoCode').onclick=()=>pickImage(decodeImageBarcode);
-  $('#aLabel').onclick=()=>pickImage(ocrLabel); $('#aSearch').onclick=searchUI; $('#aManual').onclick=()=>editFood(blankFood());
+  $('#aLabel').onclick=()=>pickImage(ocrLabel); $('#aSearch').onclick=()=>searchUI();
+  $('#aRecipe').onclick=recipePicker; $('#aManual').onclick=()=>editFood(blankFood());
 }
 
 /* ---------- script loader ---------- */
@@ -789,7 +802,7 @@ async function lookupBarcode(code){
     $('#mn').onclick=()=>editFood(Object.assign(blankFood(),{code}));
   }
 }
-async function searchUI(){
+async function searchUI(onDone){
   openSheet(`<h3>Search foods</h3>
     <label class="fld"><input type="search" id="q" placeholder="Chicken breast, carne asada, oatmeal..." autocomplete="off" enterkeyhint="search"></label>
     <div id="cats" class="pills"></div>
@@ -805,8 +818,8 @@ async function searchUI(){
     wireRows();
   });
   function wireRows(){
-    $$('#sr [data-db]').forEach(b=>b.onclick=()=>editFood(dbToFood(shown[+b.dataset.db])));
-    $$('#sr [data-off]').forEach(b=>b.onclick=()=>editFood(offShown[+b.dataset.off]));
+    $$('#sr [data-db]').forEach(b=>b.onclick=()=>editFood(dbToFood(shown[+b.dataset.db]),false,onDone));
+    $$('#sr [data-off]').forEach(b=>b.onclick=()=>editFood(offShown[+b.dataset.off],false,onDone));
   }
   function paintLocal(term){
     shown=dbSearch(term,25);
@@ -1065,6 +1078,9 @@ Ranch dressing|430|1|6|45|30|2 tbsp|Condiments|0
 Italian dressing|292|0.4|10|28|30|2 tbsp|Condiments|0
 Caesar dressing|450|2|3|48|30|2 tbsp|Condiments|0
 Honey|304|0.3|82.4|0|21|1 tbsp|Condiments|0
+Nutella|539|6.3|57.5|30.9|37|2 tbsp|Condiments|1
+Jam or jelly|278|0.4|69|0.1|20|1 tbsp|Condiments|0
+Apple butter|179|0.2|44|0.1|20|1 tbsp|Condiments|0
 Maple syrup|260|0|67|0.1|20|1 tbsp|Condiments|0
 Sugar, granulated|387|0|100|0|4|1 tsp|Condiments|0
 Marinara sauce|56|1.6|8.5|1.8|125|1/2 cup|Condiments|0
@@ -1103,6 +1119,48 @@ Sushi roll, California|130|4|22|2.5|170|1 roll|Restaurant|0
 Pho with beef|55|4.5|6.5|1.2|700|1 bowl|Restaurant|0
 Ramen, restaurant|110|6|13|4|600|1 bowl|Restaurant|0
 Pad thai|170|7|22|6|400|1 plate|Restaurant|0
+Scrambled eggs, 2 with butter|168|11|1.6|13|120|2 eggs|Homemade|1
+Scrambled eggs, 3 with butter|168|11|1.6|13|180|3 eggs|Homemade|1
+Scrambled eggs with cheese, 2|207|13.6|1.5|16.4|148|2 eggs|Homemade|0
+Egg whites, scrambled, 4|56|11.4|0.9|0.6|175|4 whites|Homemade|0
+Fried egg, in oil|196|13.6|0.8|15.3|46|1 egg|Homemade|0
+Omelet, cheese, 3 egg|194|13|1.5|15.1|200|1 omelet|Homemade|0
+Hard boiled eggs, 2|155|12.6|1.1|10.6|100|2 eggs|Homemade|0
+Toast with butter|340|8.4|45|13.8|42|1 slice|Homemade|0
+Toast with Nutella|372|7.6|51|15.2|46|1 slice|Homemade|1
+Toast with peanut butter|383|13.4|40|19.5|46|1 slice|Homemade|1
+Toast with jam|287|7.6|56|3.4|48|1 slice|Homemade|0
+Avocado toast|208|5.9|25.5|11.5|110|1 slice|Homemade|1
+Bagel with cream cheese|272|9.1|39.6|8.4|128|1 bagel|Homemade|0
+Oatmeal with banana and peanut butter|133|4.4|17.2|5.4|330|1 bowl|Homemade|0
+Yogurt with granola|141|8|18.5|3.6|200|1 cup|Homemade|0
+Cottage cheese with fruit|90|9.4|7.9|2.2|170|1 cup|Homemade|0
+Protein shake with milk|71|8.7|5.5|1.5|280|1 shake|Homemade|1
+Protein smoothie with banana|76|7.4|9.6|1.1|400|1 smoothie|Homemade|0
+Apple with peanut butter|140|4.5|18|6.5|214|1 apple|Homemade|0
+Huevos con chorizo|261|15.4|1.6|21.4|170|1 plate|Homemade|1
+Huevos a la mexicana|156|10.4|3.3|11.3|200|1 plate|Homemade|1
+Huevos rancheros|186|9.3|15.6|9.8|280|1 plate|Homemade|0
+Chilaquiles rojos con queso|214|7.2|22|11.2|300|1 plate|Homemade|1
+Chilaquiles con huevo|219|9.9|19.4|11.7|350|1 plate|Homemade|0
+Quesadilla, homemade flour|318|13.4|29|16.6|110|1 quesadilla|Homemade|1
+Frijoles de la olla|91|6.2|16.3|0.4|180|1 cup|Homemade|1
+Arroz con frijoles|151|5|27.5|2.6|200|1 cup|Homemade|1
+Picadillo con papa|168|11.8|8.4|9.5|220|1 cup|Homemade|0
+Caldo de pollo con verduras|54|5.2|4.4|1.8|400|1 bowl|Homemade|0
+Sopa de fideo|78|2.3|12.4|2.3|300|1 bowl|Homemade|0
+Pollo asado, homemade|197|27.2|0.8|9.2|140|1 piece|Homemade|0
+Bistec ranchero|191|21.5|4.2|9.6|200|1 plate|Homemade|0
+Grilled cheese sandwich|350|13.4|31|19.6|110|1 sandwich|Homemade|1
+Peanut butter and jelly sandwich|338|10.6|45|13.6|100|1 sandwich|Homemade|0
+Turkey sandwich, homemade|221|13.6|25.4|7.2|180|1 sandwich|Homemade|1
+Tuna salad, with mayo|187|16|1.4|13|140|1 cup|Homemade|0
+Tuna salad sandwich|246|13.8|23|11.8|190|1 sandwich|Homemade|0
+Chicken and rice bowl, homemade|151|13.2|17.4|3|400|1 bowl|Homemade|1
+Pasta with marinara|127|4.4|23.2|2|300|1 plate|Homemade|0
+Pasta with meat sauce|155|8.8|19.8|4.6|350|1 plate|Homemade|0
+Canned soup, chicken noodle|38|2.2|4.6|1.2|245|1 cup|Homemade|0
+Chicken salad, with mayo|198|14.4|2.2|14.6|140|1 cup|Homemade|0
 Potato chips|536|6.6|53|34.6|28|1 oz|Snacks & sweets|0
 Pretzels|380|10|80|3|28|1 oz|Snacks & sweets|0
 Popcorn, air popped|387|12.9|77.9|4.5|8|1 cup|Snacks & sweets|0
@@ -1232,7 +1290,7 @@ function parseLabel(txt){
 /* ---------- add / edit food sheet ---------- */
 function blankFood(){ return {id:uid(),code:'',name:'',brand:'',basis:'serving',servingG:0,per100:{cal:0,p:0,c:0,f:0},perServ:{cal:0,p:0,c:0,f:0}}; }
 
-function editFood(f,fromOcr){
+function editFood(f,fromOcr,onDone){
   f.perServ=f.perServ||{cal:0,p:0,c:0,f:0};
   f.per100=f.per100||{cal:0,p:0,c:0,f:0};
   const hasBoth=(f.per100.cal||f.per100.p)&&(f.perServ.cal||f.perServ.p);
@@ -1283,12 +1341,14 @@ function editFood(f,fromOcr){
   $('#mServ').onclick=()=>{ mode='serv'; $('#mServ').classList.add('on'); $('#mGram').classList.remove('on'); amtField(); };
   amtField();
 
+  if(onDone) $('#saveFood').textContent='Add to recipe';
   $('#saveFood').onclick=()=>{
     const t=computed(), amt=+$('#amt').value||0, b=base();
     const name=($('#fName').value||'Food').trim();
     const sg = $('#sg') ? (+$('#sg').value||f.servingG||0) : (mode==='grams'?amt:f.servingG);
-    dayEntries().push({id:uid(), name, cal:t.cal, p:t.p, c:t.c, f:t.f,
-      portion: mode==='grams' ? r0(amt)+' g' : r1(amt)+(amt===1?' serving':' servings')});
+    const portion = mode==='grams' ? r0(amt)+' g' : r1(amt)+(amt===1?' serving':' servings');
+    if(onDone){ onDone({id:uid(), name, cal:t.cal, p:t.p, c:t.c, f:t.f, portion}); return; }
+    dayEntries().push({id:uid(), name, cal:t.cal, p:t.p, c:t.c, f:t.f, portion});
     const lib={id:uid(), code:f.code||'', name, brand:f.brand||'', servingG:sg,
       per100: mode==='grams'? b : (sg? scale(b,100/sg) : {cal:0,p:0,c:0,f:0}),
       perServ: mode==='serv'? b : (sg? scale(b,sg/100) : {cal:0,p:0,c:0,f:0}),
@@ -1611,6 +1671,127 @@ const isClean=s=>s.logged&&s.total>=70;
 function tdee(){ return S.profile.tdee>0 ? S.profile.tdee : S.goals.cal+Math.round(S.profile.rate*3500/7); }
 function dayDeficit(k){ const s=dayScore(k); return s.logged? tdee()+dayBurn(k)-s.t.cal : 0; }
 
+
+
+/* ================= recipes =================
+   A recipe is a list of ingredients you already priced out, plus how many
+   servings the batch makes. Logging it adds one entry for the servings you
+   ate. The point over a generic "scrambled eggs" row is that the amounts
+   are yours, so the number is right instead of average. */
+let rDraft=null;          // {id, name, servings, items:[entry]}
+
+const recSum = items => items.reduce((a,e)=>({cal:a.cal+e.cal,p:a.p+e.p,c:a.c+e.c,f:a.f+e.f}),{cal:0,p:0,c:0,f:0});
+const recPer = r => { const t=recSum(r.items), n=Math.max(1,+r.servings||1);
+                      return {cal:t.cal/n,p:t.p/n,c:t.c/n,f:t.f/n}; };
+
+function newRecipe(){ rDraft={id:uid(), name:'', servings:1, items:[]}; recipeSheet(); }
+function editRecipe(id){
+  const r=S.recipes.find(x=>x.id===id); if(!r) return;
+  rDraft=JSON.parse(JSON.stringify(r)); recipeSheet();
+}
+
+function recipeSheet(){
+  const r=rDraft, t=recSum(r.items), per=recPer(r);
+  openSheet(`<h3>${r.items.length||r.name?'Edit recipe':'New recipe'}</h3>
+    <label class="fld"><span>Name it</span><input type="text" id="rName" value="${esc(r.name)}" placeholder="My scrambled eggs"></label>
+    <label class="fld"><span>Servings this batch makes</span><input type="number" id="rServ" inputmode="decimal" step="0.5" value="${r.servings}"></label>
+    <div class="sec"><h2>Ingredients</h2><span class="num" style="color:var(--dim);font-size:.85rem">${r.items.length||''}</span></div>
+    <div id="rItems"></div>
+    <button class="ghost" id="rAdd">Add an ingredient</button>
+    <div class="totalpv"><div><small>Per serving</small><b class="num" id="rvCal">${r0(per.cal)}</b></div>
+      <div><small>Protein</small><b class="num" id="rvP">${r0(per.p)}</b></div>
+      <div><small>Carbs</small><b class="num" id="rvC">${r0(per.c)}</b></div>
+      <div><small>Fat</small><b class="num" id="rvF">${r0(per.f)}</b></div></div>
+    <p class="note">Whole batch: ${r0(t.cal)} cal &middot; ${r0(t.p)}p ${r0(t.c)}c ${r0(t.f)}f</p>
+    <button class="primary" id="rSave">Save recipe</button>
+    <button class="ghost" data-close>Cancel</button>`);
+
+  $('#rItems').innerHTML = r.items.length
+    ? r.items.map((e,i)=>`<div class="item"><div class="t"><b>${esc(e.name)}</b><small>${esc(e.portion||'')}</small></div>
+        <div class="kc num">${r0(e.cal)}</div>
+        <button class="x" data-ri="${i}" aria-label="Remove ${esc(e.name)}">&times;</button></div>`).join('')
+    : '<div class="empty">No ingredients yet. Add them one at a time with the amount you actually use.</div>';
+  $$('#rItems [data-ri]').forEach(b=>b.onclick=()=>{ rDraft.items.splice(+b.dataset.ri,1); recipeSheet(); });
+
+  const sync=()=>{ rDraft.name=$('#rName').value; rDraft.servings=Math.max(0.5,+$('#rServ').value||1); };
+  $('#rName').oninput=sync;
+  $('#rServ').oninput=()=>{ sync(); const q=recPer(rDraft);
+    $('#rvCal').textContent=r0(q.cal); $('#rvP').textContent=r0(q.p); $('#rvC').textContent=r0(q.c); $('#rvF').textContent=r0(q.f); };
+
+  $('#rAdd').onclick=()=>{ sync(); searchUI(e=>{ rDraft.items.push(e); recipeSheet(); }); };
+
+  $('#rSave').onclick=()=>{
+    sync();
+    if(!rDraft.items.length){ $('#rItems').innerHTML='<div class="empty" style="border-color:var(--danger)">Add at least one ingredient first.</div>'; return; }
+    rDraft.name=(rDraft.name||'').trim()||'My recipe';
+    const i=S.recipes.findIndex(x=>x.id===rDraft.id);
+    if(i>-1) S.recipes[i]=rDraft; else S.recipes.unshift(rDraft);
+    S.recipes=S.recipes.slice(0,200);
+    rDraft=null; save(); closeSheet(); renderRecipes();
+  };
+}
+
+/* log a recipe: ask how many servings, then add one entry */
+function logRecipe(id){
+  const r=S.recipes.find(x=>x.id===id); if(!r) return;
+  const per=recPer(r);
+  openSheet(`<h3>${esc(r.name)}</h3>
+    <p class="note">${r0(per.cal)} cal per serving &middot; ${r0(per.p)}p ${r0(per.c)}c ${r0(per.f)}f</p>
+    <label class="fld"><span>Servings eaten</span><input type="number" id="rq" inputmode="decimal" step="0.25" value="1"></label>
+    <div class="totalpv"><div><small>Calories</small><b class="num" id="lvCal">0</b></div>
+      <div><small>Protein</small><b class="num" id="lvP">0</b></div>
+      <div><small>Carbs</small><b class="num" id="lvC">0</b></div>
+      <div><small>Fat</small><b class="num" id="lvF">0</b></div></div>
+    <button class="primary" id="rLog">Add to ${esc(fmtDay(day).toLowerCase())}</button>
+    <button class="ghost" id="rEdit">Edit this recipe</button>
+    <button class="ghost" data-close>Cancel</button>`);
+  const calc=()=>{ const n=+$('#rq').value||0;
+    $('#lvCal').textContent=r0(per.cal*n); $('#lvP').textContent=r0(per.p*n);
+    $('#lvC').textContent=r0(per.c*n); $('#lvF').textContent=r0(per.f*n); };
+  $('#rq').oninput=calc; calc();
+  $('#rLog').onclick=()=>{
+    const n=+$('#rq').value||0;
+    if(!(n>0)) return;
+    dayEntries().push({id:uid(), name:r.name, cal:per.cal*n, p:per.p*n, c:per.c*n, f:per.f*n,
+      portion: r1(n)+(n===1?' serving':' servings')});
+    save(); closeSheet(); render();
+  };
+  $('#rEdit').onclick=()=>editRecipe(id);
+}
+
+function recipePicker(){
+  if(!S.recipes.length){
+    openSheet('<h3>No recipes yet</h3><p class="note">Build one under Foods, then My recipes. Add the ingredients with the amounts you really use and it becomes one tap.</p><button class="primary" id="mk">Build one now</button><button class="ghost" data-close>Cancel</button>');
+    $('#mk').onclick=newRecipe; return;
+  }
+  openSheet('<h3>Your recipes</h3><div id="rp"></div><button class="ghost" data-close>Cancel</button>');
+  $('#rp').innerHTML=S.recipes.map(r=>{ const per=recPer(r);
+    return '<button class="res" data-rp="'+r.id+'"><b>'+esc(r.name)+'</b><small>'+r0(per.cal)+' cal per serving &middot; '+r.items.length+' ingredients</small></button>';
+  }).join('');
+  $$('#rp [data-rp]').forEach(b=>b.onclick=()=>logRecipe(b.dataset.rp));
+}
+
+function renderRecipes(){
+  const el=$('#recList');
+  if(!el) return;
+  el.innerHTML = S.recipes.length
+    ? S.recipes.map(r=>{ const per=recPer(r);
+        return `<div class="item"><div class="t"><b>${esc(r.name)}</b><small>${r0(per.cal)}/serving &middot; ${r.items.length} item${r.items.length===1?'':'s'} &middot; makes ${r1(r.servings)}</small></div>
+          <button class="x" data-rlog="${r.id}" style="color:var(--cal);font-size:1.3rem" aria-label="Log ${esc(r.name)}">+</button>
+          <button class="x" data-rdel="${r.id}" aria-label="Delete ${esc(r.name)}">&times;</button></div>`;
+      }).join('')
+    : '<div class="empty">No recipes yet. Tap New recipe and add what goes into a meal you make often.</div>';
+  $$('#recList [data-rlog]').forEach(b=>b.onclick=()=>logRecipe(b.dataset.rlog));
+  $$('#recList [data-rdel]').forEach(b=>b.onclick=()=>{
+    S.recipes=S.recipes.filter(x=>x.id!==b.dataset.rdel); save(); renderRecipes();
+  });
+}
+
+$('#segLib').onclick=()=>{ $('#segLib').classList.add('on'); $('#segRec').classList.remove('on');
+  $('#libPane').classList.remove('hide'); $('#recPane').classList.add('hide'); renderLib(); };
+$('#segRec').onclick=()=>{ $('#segRec').classList.add('on'); $('#segLib').classList.remove('on');
+  $('#recPane').classList.remove('hide'); $('#libPane').classList.add('hide'); renderRecipes(); };
+$('#newRecipe').onclick=newRecipe;
 
 /* ---- levels ---- */
 /* ---- levelling: one level per clean WEEK ----
