@@ -436,7 +436,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-09-21.2';
+const APP_VERSION='2026-09-23.1';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -889,6 +889,7 @@ Turkey breast, deli sliced|104|17.1|3.5|2.3|56|2 oz|Poultry|0
 Chicken breast, deli sliced|95|17|2.5|1.8|56|2 oz|Poultry|0
 Ensalada de pollo, homemade|205|10.8|8.9|14.8|115|1 tostada worth|Poultry|1
 Tostada de pollo, assembled|256|10.1|19|16.1|143|1 tostada|Poultry|1
+Tostada de ceviche, assembled|146|9.9|15.2|5.2|138|1 tostada|Poultry|1
 Ground beef, cooked, 80/20|254|25.8|0|16.2|113|4 oz|Beef|1
 Ground beef, cooked, 85/15|218|26.1|0|11.9|113|4 oz|Beef|0
 Ground beef, cooked, 90/10|196|26.6|0|9.1|113|4 oz|Beef|1
@@ -928,6 +929,8 @@ Crab meat, cooked|97|19.4|0|1.5|85|3 oz|Fish & seafood|0
 Scallops, cooked|111|20.5|5.4|0.8|85|3 oz|Fish & seafood|0
 Sardines, canned in oil, drained|208|24.6|0|11.5|92|1 can|Fish & seafood|0
 Catfish, cooked|144|18.5|0|7.3|113|4 oz|Fish & seafood|0
+Ceviche de pescado|65|10.5|3.6|1.1|110|1 tostada worth|Fish & seafood|1
+Ceviche de surimi|63|4.4|9.5|0.3|110|1 tostada worth|Fish & seafood|0
 Egg, whole, large|143|12.6|0.7|9.5|50|1 egg|Eggs & dairy|1
 Egg white|52|10.9|0.7|0.2|33|1 white|Eggs & dairy|1
 Liquid egg whites|48|10|0.7|0|46|3 tbsp|Eggs & dairy|0
@@ -1093,6 +1096,10 @@ Beer, regular|43|0.5|3.6|0|355|12 oz|Drinks|0
 Beer, light|29|0.2|1.6|0|355|12 oz|Drinks|0
 Wine, red|85|0.1|2.6|0|148|5 oz|Drinks|0
 Liquor, 80 proof|231|0|0|0|44|1.5 oz|Drinks|0
+Twisted Tea Original|55|0|7.3|0|355|1 can|Drinks|0
+Hard seltzer, 100 cal can|28|0|0.7|0|355|1 can|Drinks|1
+Vodka or tequila soda with lime|28|0|0.3|0|355|1 drink|Drinks|1
+Margarita, bar|113|0|17|0|355|1 drink|Drinks|0
 Soda, regular cola|41|0.1|10.6|0|355|12 oz|Drinks|0
 Soda, diet|0|0|0|0|355|12 oz|Drinks|0
 Sports drink|25|0|6.3|0|355|12 oz|Drinks|0
@@ -1108,6 +1115,10 @@ Enchilada, cheese|188|7.1|17.6|10|170|1 enchilada|Restaurant|0
 Tamale|250|8|25|13|100|1 tamale|Restaurant|0
 Cheeseburger, fast food|263|13.2|28.1|11.4|114|1 burger|Restaurant|0
 Big Mac|257|11.9|19.5|14.4|219|1 burger|Restaurant|0
+Fogo de Chao Picanha Burger|282|11.5|7.1|22.9|524|1 board|Restaurant|0
+Corn dog, fair size|189|7.6|20.2|9.1|198|1 corn dog|Restaurant|0
+German sausage corn dog|217|8.7|17.4|13|230|1 corn dog|Restaurant|0
+Nachos, fair with cheese sauce|279|7.1|29.4|15.9|340|1 order|Restaurant|0
 Chicken sandwich, grilled|205|18|22|4.5|200|1 sandwich|Restaurant|0
 Chicken sandwich, fried|290|14|27|14|220|1 sandwich|Restaurant|0
 Chicken nuggets|297|15|18|18|64|4 pieces|Restaurant|0
@@ -1151,6 +1162,7 @@ Caldo de pollo con verduras|54|5.2|4.4|1.8|400|1 bowl|Homemade|0
 Sopa de fideo|78|2.3|12.4|2.3|300|1 bowl|Homemade|0
 Pollo asado, homemade|197|27.2|0.8|9.2|140|1 piece|Homemade|0
 Bistec ranchero|191|21.5|4.2|9.6|200|1 plate|Homemade|0
+Picanha burger, trimmed homemade|218|12.9|8.2|14.2|450|1 burger|Homemade|1
 Grilled cheese sandwich|350|13.4|31|19.6|110|1 sandwich|Homemade|1
 Peanut butter and jelly sandwich|338|10.6|45|13.6|100|1 sandwich|Homemade|0
 Turkey sandwich, homemade|221|13.6|25.4|7.2|180|1 sandwich|Homemade|1
@@ -1177,6 +1189,8 @@ Cake, frosted|389|3.5|56|17|80|1 slice|Snacks & sweets|0
 Gummy candy|350|5|82|0.1|40|1 pouch|Snacks & sweets|0
 Trail mix|462|13.8|44.9|29.4|40|1/4 cup|Snacks & sweets|0
 Jerky stick|340|18|4|28|28|1 stick|Snacks & sweets|0
+Grass-Fed Beef Sticks|313|31.3|3.1|21.9|32|1 stick|Snacks & sweets|1
+Korean Barbecue Snack Bites|279|23.3|30.2|7|43|1 pack|Snacks & sweets|1
 String cheese|300|24|2|22|28|1 stick|Snacks & sweets|0
 Hard boiled egg, packaged|143|12.6|0.7|9.5|50|1 egg|Snacks & sweets|0`;
 const FOODDB=FOODDB_RAW.split('\n').map(l=>{
