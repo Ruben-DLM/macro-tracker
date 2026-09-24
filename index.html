@@ -436,7 +436,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-09-23.1';
+const APP_VERSION='2026-09-24.1';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -1100,6 +1100,8 @@ Twisted Tea Original|55|0|7.3|0|355|1 can|Drinks|0
 Hard seltzer, 100 cal can|28|0|0.7|0|355|1 can|Drinks|1
 Vodka or tequila soda with lime|28|0|0.3|0|355|1 drink|Drinks|1
 Margarita, bar|113|0|17|0|355|1 drink|Drinks|0
+Raspberry shaker, fair lemonade|45|0|11.3|0|710|24 oz cup|Drinks|0
+Celsius energy drink|2.8|0|0.6|0|355|1 can|Drinks|1
 Soda, regular cola|41|0.1|10.6|0|355|12 oz|Drinks|0
 Soda, diet|0|0|0|0|355|12 oz|Drinks|0
 Sports drink|25|0|6.3|0|355|12 oz|Drinks|0
@@ -1117,7 +1119,8 @@ Cheeseburger, fast food|263|13.2|28.1|11.4|114|1 burger|Restaurant|0
 Big Mac|257|11.9|19.5|14.4|219|1 burger|Restaurant|0
 Fogo de Chao Picanha Burger|282|11.5|7.1|22.9|524|1 board|Restaurant|0
 Corn dog, fair size|189|7.6|20.2|9.1|198|1 corn dog|Restaurant|0
-German sausage corn dog|217|8.7|17.4|13|230|1 corn dog|Restaurant|0
+Big Dog corn dog, jumbo|229|8.3|21.7|12.5|240|1 corn dog|Restaurant|1
+Brat corn dog, German sausage|217|8.7|17.4|13|230|1 corn dog|Restaurant|1
 Nachos, fair with cheese sauce|279|7.1|29.4|15.9|340|1 order|Restaurant|0
 Chicken sandwich, grilled|205|18|22|4.5|200|1 sandwich|Restaurant|0
 Chicken sandwich, fried|290|14|27|14|220|1 sandwich|Restaurant|0
