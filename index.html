@@ -387,9 +387,46 @@ const SEED_ROUTINES=[
     {n:'Seated DB overhead tricep extension',w:'40 lb',       s:4, r:10},
     {n:'Barbell curls',                      w:'Olympic bar', s:4, r:10},
     {n:'Overhead tricep ext, single arm',    w:'15 lb',       s:4, r:10, note:'each arm'}
+  ]},
+  {id:'rt_chest', name:'Chest', met:6, min:55, ex:[
+    {n:'Incline bench press',                w:'125 lb',      s:4, r:10},
+    {n:'Reverse close-grip incline bench',   w:'70 lb',       s:4, r:10},
+    {n:'Flat DB squeeze press',              w:'45 lb',       s:4, r:10},
+    {n:'Cable flys, chest level',            w:'15 lb',       s:3, r:10},
+    {n:'Cable flys, low to high',            w:'15 lb',       s:3, r:10},
+    {n:'Push-ups',                           w:'bodyweight',  s:4, r:25, note:'100 total'}
+  ]},
+  {id:'rt_legs', name:'Legs', met:6, min:60, ex:[
+    {n:'Seated leg extensions',              w:'80 lb',       s:4, r:12},
+    {n:'Squats',                             w:'125 lb',      s:4, r:8},
+    {n:'Calf raises',                        w:'100 lb',      s:4, r:12},
+    {n:'Bulgarian split squats',             w:'25 lb DBs',   s:4, r:10, note:'each leg'},
+    {n:'Sissy squats',                       w:'bodyweight',  s:4, r:8}
+  ]},
+  {id:'rt_abs', name:'Abs', met:4, min:35, ex:[
+    {n:'Weighted cable crunches',            w:'105 lb',      s:4, r:12},
+    {n:'Knee raises',                        w:'bodyweight',  s:4, r:25, note:'100 total'},
+    {n:'Cotton pickers',                     w:'15 lb',       s:4, r:12},
+    {n:'Elbow-to-hand planks',               w:'bodyweight',  s:3, r:10, note:'then 1 min plank each round'}
+  ]},
+  {id:'rt_back', name:'Back', met:6, min:60, ex:[
+    {n:'Cable bar pulldowns',                w:'105 lb',      s:4, r:10},
+    {n:'Cable bar rows',                     w:'105 lb',      s:4, r:10},
+    {n:'Shrugs',                             w:'45 lb DBs',   s:4, r:10},
+    {n:'Landmine rows',                      w:'90 lb',       s:4, r:10},
+    {n:'RDLs',                               w:'125 lb',      s:4, r:8},
+    {n:'Seated barbell power press',         w:'65 lb',       s:4, r:10, note:'10 s hold at full extension after each set'}
   ]}
 ];
-if(!Array.isArray(S.routines)) S.routines=JSON.parse(JSON.stringify(SEED_ROUTINES));
+/* Seed each routine at most once, ever. Adding a new one to the list above
+   gives it to you on next open; deleting one in the app keeps it deleted. */
+S.routines=S.routines||[];
+S.profile.seededRoutines=S.profile.seededRoutines||[];
+SEED_ROUTINES.forEach(r=>{
+  if(S.profile.seededRoutines.indexOf(r.id)>-1) return;
+  S.profile.seededRoutines.push(r.id);
+  if(!S.routines.some(x=>x.id===r.id)) S.routines.push(JSON.parse(JSON.stringify(r)));
+});
 S.profile.usual=Object.assign({steps:3000,min:40,mph:3.2,inc:0,sleep:7.5},S.profile.usual||{});
 if(typeof S.profile.stepsNet!=='boolean') S.profile.stepsNet=false;
 if(S.profile.inclineUnit!=='deg') S.profile.inclineUnit='pct';
@@ -454,7 +491,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-01.4';
+const APP_VERSION='2026-10-01.5';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
