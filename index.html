@@ -155,8 +155,12 @@ input:focus,select:focus{border-color:var(--cal)}
 .chart .grid{stroke:var(--line); stroke-width:1}
 .chart .axis{fill:var(--dim); font-size:10px; font-family:inherit}
 .chart .lbl{fill:var(--text); font-size:10px; font-weight:600; font-family:inherit}
+.chart .vlbl{font-size:9.5px; font-weight:600; font-family:inherit; letter-spacing:-.02em}
 .hm{display:grid; grid-template-columns:repeat(7,1fr); gap:4px}
-.hm i{aspect-ratio:1; border-radius:4px; display:block; border:1px solid rgba(255,255,255,.04)}
+.hm i{aspect-ratio:1; border-radius:4px; display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(255,255,255,.04); font-style:normal; font-size:.6rem; font-weight:600;
+  line-height:1; letter-spacing:-.03em; color:rgba(255,255,255,.93)}
+.hm i.off{color:transparent}
 .hmhead{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px}
 .hmhead span{text-align:center; color:var(--dim); font-size:.65rem; text-transform:uppercase}
 .key{display:flex; align-items:center; gap:7px; margin-top:12px; color:var(--dim); font-size:.72rem; flex-wrap:wrap}
@@ -531,7 +535,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-01.7';
+const APP_VERSION='2026-10-01.8';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -2255,11 +2259,13 @@ const shortDate=k=>new Date(k+'T12:00').toLocaleDateString(undefined,{month:'sho
 
 /* ---- calories vs target, one bar per day ---- */
 function calBars(keys){
-  const g=S.goals, VB=320, H=142, padT=16, padB=20;
+  const g=S.goals, VB=320, H=152, padB=20;
+  const showVals = keys.length<=10;            // 28 bars are too narrow to label
+  const padT = showVals ? 28 : 16;
   const vals=keys.map(k=>dayTotals(k).cal);
   const maxV=Math.max(g.cal*1.2, Math.max.apply(null,vals.concat([1])));
   const plotH=H-padT-padB, bw=VB/keys.length, iw=Math.max(6,Math.min(28,bw-8));
-  let bars='',labels='';
+  let bars='',labels='',vlbl='';
   keys.forEach((k,i)=>{
     const t=dayTotals(k), s=dayScore(k);
     const x=i*bw+(bw-iw)/2;
@@ -2267,13 +2273,16 @@ function calBars(keys){
     const col=!s.logged?'var(--line)':(t.cal>g.cal*1.05?'var(--fat)':'var(--pro)');
     bars+='<rect class="bar" data-k="'+k+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+iw.toFixed(1)+
           '" height="'+Math.max(hgt,2).toFixed(1)+'" rx="4" fill="'+col+'"/>';
+    if(showVals && s.logged)
+      vlbl+='<text class="vlbl" x="'+(x+iw/2).toFixed(1)+'" y="'+Math.max(9,y-5).toFixed(1)+
+            '" text-anchor="middle" fill="'+col+'">'+r0(t.cal)+'</text>';
     if(keys.length<=7) labels+='<text class="axis" x="'+(x+iw/2).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+dayLetter(k)+'</text>';
   });
   const ty=padT+plotH-(g.cal/maxV)*plotH;
   return '<svg class="chart" viewBox="0 0 '+VB+' '+H+'" role="img" aria-label="Calories per day against target">'+
     '<line class="grid" x1="0" y1="'+ty.toFixed(1)+'" x2="'+VB+'" y2="'+ty.toFixed(1)+'" stroke-dasharray="4 4"/>'+
 
-    bars+labels+'</svg>';
+    bars+vlbl+labels+'</svg>';
 }
 
 /* ---- weight over time ---- */
@@ -2308,19 +2317,35 @@ function weightChart(days){
     '</svg>';
 }
 
-/* ---- month heatmap, one hue getting lighter as the day scores better ---- */
+/* ---- month heatmap ----
+   Grey means nothing was logged. Red means the day counted as a miss.
+   Otherwise green, getting lighter as the day scores better. Each square
+   carries the calories for that day. */
 const HEAT=['#1E2733','#1F4A3C','#2A6B54','#388F6E','#4AB68B','#5AD1A5'];
+const MISS_RED='#9B2F3A';
 const heatColor=s=>s<=0?HEAT[0]:HEAT[Math.min(5,1+Math.floor(s/21))];
+function cellPaint(k){
+  const s=dayScore(k);
+  if(!s.logged) return {bg:HEAT[0], off:true, txt:'', fg:''};
+  const m=dayMiss(k);
+  if(m.miss) return {bg:MISS_RED, off:false, txt:r0(s.t.cal), fg:'#FFF'};
+  const idx=Math.min(5,1+Math.floor(s.total/21));
+  /* the brightest greens need dark text to stay readable */
+  return {bg:HEAT[idx], off:false, txt:r0(s.t.cal), fg: idx>=4 ? '#08121A' : 'rgba(255,255,255,.95)'};
+}
 function heatmap(keys){
   let cells='';
   keys.forEach(k=>{
-    const s=dayScore(k);
-    cells+='<i class="hcell" data-k="'+k+'" style="background:'+heatColor(s.logged?s.total:0)+'"></i>';
+    const c=cellPaint(k);
+    cells+='<i class="hcell'+(c.off?' off':'')+'" data-k="'+k+'" style="background:'+c.bg+
+           (c.fg?';color:'+c.fg:'')+'">'+c.txt+'</i>';
   });
   const head=['S','M','T','W','T','F','S'].map(d=>'<span>'+d+'</span>').join('');
-  let key='<div class="key"><span>Lower</span>';
-  HEAT.forEach(c=>{ key+='<i style="background:'+c+'"></i>'; });
-  key+='<span>Higher day score</span></div>';
+  let key='<div class="key"><i style="background:'+HEAT[0]+'"></i><span>Not logged</span>'+
+          '<i style="background:'+MISS_RED+'"></i><span>Miss</span>'+
+          '<span>Worse</span>';
+  HEAT.slice(1).forEach(c=>{ key+='<i style="background:'+c+'"></i>'; });
+  key+='<span>Better</span></div>';
   return '<div class="hmhead">'+head+'</div><div class="hm">'+cells+'</div>'+key;
 }
 
@@ -2406,7 +2431,7 @@ function renderProgress(){
         ((S.sleep[k]||0)>0?' · '+r1(S.sleep[k])+'h':'')+'</span>'+tag+'</div>';
     });
   } else {
-    bbody='<h3>The month</h3><div class="sub">Each square is a day. Brighter means a better score.</div>'+heatmap(alignedMonthKeys());
+    bbody='<h3>The month</h3><div class="sub">Each square is a day, showing the calories you ate. Red is a miss, grey was never logged, and brighter green means a better score.</div>'+heatmap(alignedMonthKeys());
   }
   $('#cardBreak').innerHTML=bbody;
   wireProgTips();
@@ -2424,8 +2449,9 @@ function wireProgTips(){
     showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+r1(S.weights[k])+' lb');
   });
   $$('#viewProgress .hcell').forEach(el=>el.onclick=ev=>{
-    const k=el.dataset.k, s=dayScore(k), r=el.getBoundingClientRect();
-    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+(s.logged?r0(s.t.cal)+' cal · score '+s.total:'not logged'));
+    const k=el.dataset.k, s=dayScore(k), m=dayMiss(k), r=el.getBoundingClientRect();
+    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+
+      (s.logged? r0(s.t.cal)+' cal · score '+s.total+(m.miss?' · missed, '+esc(m.why):'') : 'not logged'));
   });
 }
 function logWeightUI(){
