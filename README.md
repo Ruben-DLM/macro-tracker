@@ -24,5 +24,3 @@ No dependencies bundled, no build step. Two libraries load from CDN only when th
 ## License
 
 MIT
-
-<!-- deploy nudge 2026-10-01T02:14:19Z -->

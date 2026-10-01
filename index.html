@@ -87,11 +87,17 @@ nav button.on svg{stroke:var(--cal)}
 .sheet.open{display:block}
 .sheet .scrim{position:absolute; inset:0; background:rgba(6,10,14,.72)}
 .sheet .card{position:absolute; left:0; right:0; bottom:0; max-height:92vh; overflow:auto; background:var(--ink);
-  border-top:1px solid var(--line); border-radius:22px 22px 0 0; padding:8px 0 calc(24px + env(safe-area-inset-bottom));
-  animation:up .22s ease}
+  border-top:1px solid var(--line); border-radius:22px 22px 0 0; padding:0 0 calc(24px + env(safe-area-inset-bottom));
+  animation:up .22s ease; will-change:transform; overscroll-behavior:contain}
+.sheet .card.drag{animation:none; transition:none}
+.sheetTop{position:sticky; top:0; z-index:3; background:var(--ink); padding:7px 0 5px;
+  border-radius:22px 22px 0 0; touch-action:none; cursor:grab}
+.sheetX{position:absolute; top:5px; right:12px; width:36px; height:36px; border-radius:50%;
+  background:var(--panel); border:1px solid var(--line); display:grid; place-items:center; padding:0}
+.sheetX svg{width:15px; height:15px; stroke:var(--dim); fill:none; stroke-width:2.3; stroke-linecap:round}
 @keyframes up{from{transform:translateY(14px); opacity:.4}to{transform:none; opacity:1}}
 @media (prefers-reduced-motion:reduce){.sheet .card{animation:none} .track>i,.mac .bar>i{transition:none}}
-.grab{width:38px; height:4px; border-radius:3px; background:var(--line); margin:6px auto 14px}
+.grab{width:44px; height:5px; border-radius:3px; background:var(--line); margin:4px auto 9px}
 .sheet h3{font-size:1.1rem; margin-bottom:12px}
 
 .action{display:flex; gap:13px; align-items:center; width:100%; text-align:left; padding:15px 14px; background:var(--panel); border:1px solid var(--line); border-radius:15px; margin-bottom:9px}
@@ -348,7 +354,12 @@ input:focus,select:focus{border-color:var(--cal)}
 <!-- sheets -->
 <div class="sheet" id="sheet">
   <div class="scrim" data-close></div>
-  <div class="card"><div class="grab"></div><div class="wrap" id="sheetBody"></div></div>
+  <div class="card">
+    <div class="sheetTop"><div class="grab"></div>
+      <button class="sheetX" data-close type="button" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="wrap" id="sheetBody"></div>
+  </div>
 </div>
 
 <script>
@@ -520,7 +531,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-01.6';
+const APP_VERSION='2026-10-01.7';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -622,8 +633,51 @@ $$('nav button').forEach(b=>b.onclick=()=>{
 });
 
 /* ---------- sheet plumbing ---------- */
-function openSheet(html){ $('#sheetBody').innerHTML=html; $('#sheet').classList.add('open'); }
-function closeSheet(){ $('#sheet').classList.remove('open'); stopScan(); }
+const sheetCard = () => $('#sheet').querySelector('.card');
+function sheetReset(){ const c=sheetCard(); if(c){ c.classList.remove('drag'); c.style.transform=''; } }
+function openSheet(html){ $('#sheetBody').innerHTML=html; sheetReset(); $('#sheet').classList.add('open'); const c=sheetCard(); if(c) c.scrollTop=0; }
+function closeSheet(){ $('#sheet').classList.remove('open'); sheetReset(); stopScan(); }
+
+/* swipe the sheet down to dismiss: from the handle, or from anywhere once scrolled to the top */
+(function(){
+  const sheet=$('#sheet'); let c=null, y0=0, dy=0, live=false;
+  const yOf = e => (e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY);
+  sheet.addEventListener('touchstart', e=>{
+    if(e.touches.length!==1) return;
+    c=sheetCard(); if(!c) return;
+    const onHandle = !!e.target.closest('.sheetTop');
+    if(e.target.closest('.sheetX')) return;
+    if(!onHandle){
+      if(c.scrollTop>0) return;
+      if(e.target.closest('input,textarea,select,button,a,[data-close]')) return;
+    }
+    y0=yOf(e); dy=0; live=true; c.classList.add('drag');
+  }, {passive:true});
+  sheet.addEventListener('touchmove', e=>{
+    if(!live||!c) return;
+    dy=yOf(e)-y0;
+    if(dy<0){ dy=0; c.style.transform=''; return; }
+    c.style.transform='translateY('+dy+'px)';
+  }, {passive:true});
+  const end = ()=>{
+    if(!live||!c) return;
+    live=false;
+    const card=c;
+    card.style.transition='transform .19s ease';
+    if(dy>100){
+      card.style.transform='translateY(100%)';
+      setTimeout(()=>{ card.style.transition=''; closeSheet(); }, 175);
+    } else {
+      card.style.transform='';
+      setTimeout(()=>{ card.style.transition=''; card.classList.remove('drag'); }, 200);
+    }
+  };
+  sheet.addEventListener('touchend', end);
+  sheet.addEventListener('touchcancel', end);
+})();
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && $('#sheet').classList.contains('open')) closeSheet();
+});
 
 function openAdd(){
   openSheet(`<h3>Add food</h3>
