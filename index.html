@@ -535,7 +535,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-01.8';
+const APP_VERSION='2026-10-01.9';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -2340,7 +2340,7 @@ function heatmap(keys){
     cells+='<i class="hcell'+(c.off?' off':'')+'" data-k="'+k+'" style="background:'+c.bg+
            (c.fg?';color:'+c.fg:'')+'">'+c.txt+'</i>';
   });
-  const head=['S','M','T','W','T','F','S'].map(d=>'<span>'+d+'</span>').join('');
+  const head=['M','T','W','T','F','S','S'].map(d=>'<span>'+d+'</span>').join('');
   let key='<div class="key"><i style="background:'+HEAT[0]+'"></i><span>Not logged</span>'+
           '<i style="background:'+MISS_RED+'"></i><span>Miss</span>'+
           '<span>Worse</span>';
@@ -2354,7 +2354,7 @@ let progMode='week';
 function alignedMonthKeys(){
   // pad back to the Sunday of the earliest week so columns line up with weekdays
   const start=new Date(keyBack(27)+'T12:00');
-  start.setDate(start.getDate()-start.getDay());
+  start.setDate(start.getDate()-((start.getDay()+6)%7));   // back to Monday
   const out=[], today=iso(new Date());
   for(let i=0;i<35;i++){
     const d=new Date(start); d.setDate(start.getDate()+i);
@@ -2364,9 +2364,19 @@ function alignedMonthKeys(){
   }
   return out;
 }
+/* The calendar week this dashboard shows: Monday through Sunday, the same
+   frame the level system already uses, so the two cannot disagree. Days later
+   this week are included so the chart keeps a steady 7 columns; they simply
+   read as not logged. */
+function weekKeys(){
+  const mon=new Date(mondayOf(new Date())+'T12:00'), out=[];
+  for(let i=0;i<7;i++){ const d=new Date(mon); d.setDate(mon.getDate()+i); out.push(iso(d)); }
+  return out;
+}
 function renderProgress(){
   const n=progMode==='week'?7:28;
-  const keys=rangeKeys(n);
+  const keys=progMode==='week'?weekKeys():rangeKeys(n);
+  const todayK=iso(new Date());
   const li=levelInfo();
   $('#rankName').textContent=li.rank;
   $('#lvlNum').textContent='Level '+li.level;
@@ -2384,6 +2394,9 @@ function renderProgress(){
   $('#rankName').textContent = li.lost ? li.rank+' · -'+li.lost : li.rank;
   drawSprite();
 
+  /* Grade against the days that have actually happened, not the whole week.
+     Two clean days out of a Tuesday is on pace, not a failure. */
+  const elapsed=Math.max(1, keys.filter(k=>k<=todayK).length);
   const scored=keys.map(dayScore);
   const loggedDays=scored.filter(s=>s.logged).length;
   const cleanDays=scored.filter(isClean).length;
@@ -2402,7 +2415,7 @@ function renderProgress(){
   const measured = inRange.length>=2 ? (+S.weights[inRange[inRange.length-1]] - +S.weights[inRange[0]]) : null;
 
   $('#statGrid').innerHTML=
-    stat('Clean days', cleanDays+' / '+n, loggedDays+' days logged', cleanDays>=n*0.7?'good':(cleanDays>=n*0.4?'warn':'bad'))+
+    stat('Clean days', cleanDays+' / '+n, loggedDays+' of '+elapsed+' days logged', cleanDays>=elapsed*0.7?'good':(cleanDays>=elapsed*0.4?'warn':'bad'))+
     stat('Week streak', streak+(streak===1?' week':' weeks'), streak>0?'clean weeks in a row':'clear a week to start one', streak>=2?'good':'neutral')+
     stat('Levels lost', li.lost, li.lost?li.lost+(li.lost===1?' break of ':' breaks of ')+'over '+MAX_BREAK+' days':'no break over '+MAX_BREAK+' days', li.lost?'bad':'good')+
     stat('Avg calories', loggedDays?r0(avgCal):'--', 'target '+r0(S.goals.cal), !loggedDays?'neutral':(avgCal>S.goals.cal*1.05?'bad':'good'))+
@@ -2423,8 +2436,8 @@ function renderProgress(){
 
   let bbody;
   if(progMode==='week'){
-    bbody='<h3>Day by day</h3><div class="sub">Score blends calories (45%), protein (35%) and how close carbs and fat land (20%). A day is a miss if you went over target, never logged, or slept under '+r1(S.profile.sleepMin)+' h.</div>';
-    keys.forEach(k=>{ const s=dayScore(k), m=dayMiss(k);
+    bbody='<h3>Day by day</h3><div class="sub">Monday to Sunday. Score blends calories (45%), protein (35%) and how close carbs and fat land (20%). A day is a miss if you went over target, never logged, or slept under '+r1(S.profile.sleepMin)+' h.</div>';
+    keys.filter(k=>k<=todayK).forEach(k=>{ const s=dayScore(k), m=dayMiss(k);
       const tag = m.miss ? '<b class="bad">'+esc(m.why)+'</b>'
                          : (s.logged?'<b class="'+(isClean(s)?'good':(s.total>=45?'warn':'bad'))+'">'+s.total+'</b>':'<b style="color:var(--dim)">not logged</b>');
       bbody+='<div class="rowline"><span>'+shortDate(k)+(k===iso(new Date())?' · today':'')+
