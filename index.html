@@ -541,7 +541,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-02.1';
+const APP_VERSION='2026-10-02.2';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -1979,20 +1979,33 @@ function dayTotals(k){ return (S.days[k]||[]).reduce((a,e)=>({cal:a.cal+e.cal,p:
 
 /* A day is scored only on what the app actually knows: calories against target,
    protein against target, and how close carbs and fat land to theirs. */
+/* Share of the protein target that makes a low-calorie day count as deliberate
+   rather than a shortfall. */
+const PRO_FLOOR=0.80;
 function dayScore(k){
   const t=dayTotals(k), g=S.goals;
   const logged=(S.days[k]||[]).length>0 && t.cal>=300;
   if(!logged) return {k,logged:false,total:0,calS:0,proS:0,balS:0,t};
   const rc=g.cal? t.cal/g.cal : 1;
+  /* Cutting rule: eating well under target is deliberate, not a failure, so
+     long as protein still lands. Hit PRO_FLOOR of the protein target and the
+     calorie component stops docking you for being low. Going OVER is still
+     penalised exactly as before. */
+  const proOK = g.p ? (t.p >= g.p*PRO_FLOOR) : false;
+  const lowOK = rc<0.90 && proOK;
   let calS;
   if(rc<=1.05 && rc>=0.90) calS=100;
   else if(rc>1.05) calS=clamp(100-(rc-1.05)*400,0,100);
-  else calS=clamp(100-(0.90-rc)*260,0,100);
+  else calS = proOK ? 100 : clamp(100-(0.90-rc)*260,0,100);
   const proS=g.p? clamp(t.p/g.p*100,0,100) : 0;
   const near=(v,tg)=> tg? clamp(100-Math.abs(v-tg)/tg*140,0,100) : 0;
-  const balS=(near(t.c,g.c)+near(t.f,g.f))/2;
+  /* On an intentionally low day, judging carbs and fat against full-day targets
+     is meaningless: they cannot be hit on half the calories. Scale them to what
+     was actually eaten so balance still measures something real. */
+  const bScale = lowOK ? Math.max(rc,0.3) : 1;
+  const balS=(near(t.c,g.c*bScale)+near(t.f,g.f*bScale))/2;
   return {k,logged:true,total:Math.round(0.45*calS+0.35*proS+0.20*balS),
-          calS:Math.round(calS),proS:Math.round(proS),balS:Math.round(balS),t};
+          calS:Math.round(calS),proS:Math.round(proS),balS:Math.round(balS),lowOK,proOK,t};
 }
 /* A clean day is logged, scored at least 70, and not a miss. Short sleep or
    going over target disqualifies it, so this agrees with the level system
@@ -2471,7 +2484,7 @@ function renderProgress(){
 
   let bbody;
   if(progMode==='week'){
-    bbody='<h3>Day by day</h3><div class="sub">Monday to Sunday. Score blends calories (45%), protein (35%) and how close carbs and fat land (20%). A day is a miss if you went over target, never logged, or slept under '+r1(S.profile.sleepMin)+' h.</div>';
+    bbody='<h3>Day by day</h3><div class="sub">Monday to Sunday. Score blends calories (45%), protein (35%) and how close carbs and fat land (20%). Eating under target does not cost you anything as long as protein reaches '+r0(S.goals.p*PRO_FLOOR)+' g, which is '+Math.round(PRO_FLOOR*100)+'% of your '+r0(S.goals.p)+' g target. A day is a miss if you went over target, never logged, or slept under '+r1(S.profile.sleepMin)+' h.</div>';
     keys.filter(k=>k<=todayK).forEach(k=>{ const s=dayScore(k), m=dayMiss(k);
       const tag = m.miss ? '<b class="bad">'+esc(m.why)+'</b>'
                          : (s.logged?'<b class="'+(isClean(s)?'good':(s.total>=45?'warn':'bad'))+'">'+s.total+'</b>':'<b style="color:var(--dim)">not logged</b>');
@@ -2490,7 +2503,7 @@ function stat(label,val,note,cls){
 function wireProgTips(){
   $$('#viewProgress .bar').forEach(el=>el.onclick=ev=>{
     const k=el.dataset.k, s=dayScore(k), r=el.getBoundingClientRect();
-    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+(s.logged?r0(s.t.cal)+' cal · '+r0(s.t.p)+'g protein · score '+s.total:'not logged'));
+    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+(s.logged?r0(s.t.cal)+' cal · '+r0(s.t.p)+'g protein · score '+s.total+(s.lowOK?' · low day, protein hit':''):'not logged'));
   });
   $$('#viewProgress .wdot').forEach(el=>el.onclick=ev=>{
     const k=el.dataset.k, r=el.getBoundingClientRect();
@@ -2499,7 +2512,8 @@ function wireProgTips(){
   $$('#viewProgress .hcell').forEach(el=>el.onclick=ev=>{
     const k=el.dataset.k, s=dayScore(k), m=dayMiss(k), r=el.getBoundingClientRect();
     showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+
-      (s.logged? r0(s.t.cal)+' cal · score '+s.total+(m.miss?' · missed, '+esc(m.why):'') : 'not logged'));
+      (s.logged? r0(s.t.cal)+' cal · '+r0(s.t.p)+'g protein · score '+s.total+
+        (m.miss?' · missed, '+esc(m.why):(s.lowOK?' · low day, protein hit':'')) : 'not logged'));
   });
 }
 function logWeightUI(){
