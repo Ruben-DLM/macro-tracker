@@ -312,6 +312,11 @@ input:focus,select:focus{border-color:var(--cal)}
   <p class="note" id="wPrev">Pick a type and minutes for an estimate.</p>
   <button class="primary" id="addWork">Add workout</button>
 
+  <div class="sec"><h2>My routines</h2></div>
+  <p class="note">Saved workout days. Tap <b>+</b> to log one, tap the name to see the exercises or change the weights.</p>
+  <div id="routineList"></div>
+  <button class="ghost" id="newRoutine">New routine</button>
+
   <div class="sec"><h2>Logged</h2><span class="num" id="actCount" style="color:var(--dim);font-size:.85rem"></span></div>
   <div id="actList"></div>
 
@@ -372,6 +377,19 @@ S.profile=Object.assign({},DEF.profile,S.profile||{});
 S.days=S.days||{}; S.library=S.library||[]; S.weights=S.weights||{};
 S.act=S.act||{}; S.steps=S.steps||{};   /* added 2026-09-20: activity log + daily step count */
 S.sleep=S.sleep||{}; S.recipes=S.recipes||[];
+/* Saved workout days. Seeded once with the routines you actually run, then
+   it is yours: edit weights as you progress, add days, delete what you drop. */
+const SEED_ROUTINES=[
+  {id:'rt_arms', name:'Arms', met:5, min:60, ex:[
+    {n:'Cable curls',                        w:'45 lb',       s:4, r:10},
+    {n:'Cable tricep pulldowns',             w:'45 lb',       s:4, r:10},
+    {n:'Hammer curls',                       w:'25 lb DB',    s:4, r:10},
+    {n:'Seated DB overhead tricep extension',w:'40 lb',       s:4, r:10},
+    {n:'Barbell curls',                      w:'Olympic bar', s:4, r:10},
+    {n:'Overhead tricep ext, single arm',    w:'15 lb',       s:4, r:10, note:'each arm'}
+  ]}
+];
+if(!Array.isArray(S.routines)) S.routines=JSON.parse(JSON.stringify(SEED_ROUTINES));
 S.profile.usual=Object.assign({steps:3000,min:40,mph:3.2,inc:0,sleep:7.5},S.profile.usual||{});
 if(typeof S.profile.stepsNet!=='boolean') S.profile.stepsNet=false;
 if(S.profile.inclineUnit!=='deg') S.profile.inclineUnit='pct';
@@ -436,7 +454,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-01.3';
+const APP_VERSION='2026-10-01.4';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -1524,6 +1542,132 @@ function netSteps(k){
 function stepBurn(k){ return stepCal(netSteps(k), bodyKg(k)); }
 function dayBurn(k){ return sessionBurn(k)+stepBurn(k); }
 
+/* ================= saved workout routines =================
+   A routine is a workout day you repeat: the exercises, the weight, the sets
+   and reps. Logging one writes a single activity entry using its minutes and
+   intensity, so burn still comes from the same MET maths as everything else.
+   The exercise list is there so you can follow it at the rack. */
+let rtDraft=null;
+
+const rtSets  = rt => (rt.ex||[]).reduce((a,e)=>a+(+e.s||0),0);
+/* a sensible default when you have not timed it: about 2.5 min per working
+   set, which covers the set plus the rest after it */
+const rtAutoMin = rt => Math.max(10, Math.round(rtSets(rt)*2.5));
+const rtCal = (rt,kg) => metCal(+rt.min||rtAutoMin(rt), +rt.met||5, kg);
+
+function newRoutine(){ rtDraft={id:uid(), name:'', met:5, min:0, ex:[]}; routineSheet(); }
+function editRoutine(id){
+  const rt=S.routines.find(x=>x.id===id); if(!rt) return;
+  rtDraft=JSON.parse(JSON.stringify(rt)); routineSheet();
+}
+
+function routineSheet(){
+  const rt=rtDraft, kg=bodyKg(day);
+  const mins=+rt.min||rtAutoMin(rt);
+  openSheet(`<h3>${rt.ex.length||rt.name?'Edit routine':'New routine'}</h3>
+    <label class="fld"><span>Name this day</span><input type="text" id="rtName" value="${esc(rt.name)}" placeholder="Arms, Push, Legs..."></label>
+    <div class="row4">
+      <label class="fld"><span>Minutes</span><input type="number" id="rtMin" inputmode="numeric" value="${mins}"></label>
+      <label class="fld"><span>Intensity</span><select id="rtMet"></select></label>
+    </div>
+    <p class="note" id="rtBurn"></p>
+    <div class="sec"><h2>Exercises</h2><span class="num" style="color:var(--dim);font-size:.85rem">${rt.ex.length||''}</span></div>
+    <div id="rtList"></div>
+    <div class="row4">
+      <label class="fld"><span>Exercise</span><input type="text" id="exN" placeholder="Cable curls"></label>
+      <label class="fld"><span>Weight</span><input type="text" id="exW" placeholder="45 lb"></label>
+      <label class="fld"><span>Sets</span><input type="number" id="exS" inputmode="numeric" value="4"></label>
+      <label class="fld"><span>Reps</span><input type="number" id="exR" inputmode="numeric" value="10"></label>
+    </div>
+    <button class="ghost" id="exAdd">Add exercise</button>
+    <button class="primary" id="rtSave">Save routine</button>
+    <button class="ghost" data-close>Cancel</button>`);
+
+  const sel=$('#rtMet');
+  sel.innerHTML=[[3.5,'Light, machines or isolation'],[5,'Moderate, normal lifting'],[6,'Heavy, compound work'],[7,'Circuit, little rest']]
+    .map(([v,l])=>`<option value="${v}" ${(+rt.met||5)===v?'selected':''}>${l}</option>`).join('');
+
+  const paint=()=>{
+    $('#rtList').innerHTML = rt.ex.length
+      ? rt.ex.map((e,i)=>`<div class="item"><div class="t"><b>${esc(e.n)}</b><small>${esc(e.w||'')}${e.w?' &middot; ':''}${e.s}&times;${e.r}${e.note?' &middot; '+esc(e.note):''}</small></div>
+          <button class="x" data-xi="${i}" aria-label="Remove ${esc(e.n)}">&times;</button></div>`).join('')
+      : '<div class="empty">No exercises yet. Add them one at a time below.</div>';
+    $$('#rtList [data-xi]').forEach(b=>b.onclick=()=>{ rtDraft.ex.splice(+b.dataset.xi,1); paint(); burn(); });
+  };
+  const sync=()=>{ rt.name=$('#rtName').value; rt.min=Math.max(1,+$('#rtMin').value||0); rt.met=+$('#rtMet').value||5; };
+  const burn=()=>{ sync();
+    $('#rtBurn').innerHTML=rtSets(rt)+' working sets &middot; about <b>'+r0(rtCal(rt,kg))+' cal</b> at '+r1(bodyLb(day))+' lb'; };
+  let minTouched = (+rt.min>0);     // an existing routine already has a real number
+  paint(); burn();
+  $('#rtMin').oninput=()=>{ minTouched=true; burn(); };
+  $('#rtMet').onchange=burn; $('#rtName').oninput=sync;
+
+  $('#exAdd').onclick=()=>{
+    const n=($('#exN').value||'').trim(); if(!n) return;
+    rtDraft.ex.push({n, w:($('#exW').value||'').trim(), s:Math.max(1,+$('#exS').value||4), r:Math.max(1,+$('#exR').value||10)});
+    $('#exN').value=''; $('#exW').value='';
+    if(!minTouched) $('#rtMin').value=rtAutoMin(rtDraft);   // 2.5 min per set until you say otherwise
+    paint(); burn();
+  };
+  $('#rtSave').onclick=()=>{
+    sync();
+    if(!rtDraft.ex.length){ $('#rtList').innerHTML='<div class="empty" style="border-color:var(--danger)">Add at least one exercise first.</div>'; return; }
+    rtDraft.name=(rtDraft.name||'').trim()||'Workout day';
+    if(!(rtDraft.min>0)) rtDraft.min=rtAutoMin(rtDraft);
+    const i=S.routines.findIndex(x=>x.id===rtDraft.id);
+    if(i>-1) S.routines[i]=rtDraft; else S.routines.push(rtDraft);
+    S.routines=S.routines.slice(0,50);
+    rtDraft=null; save(); closeSheet(); renderMove();
+  };
+}
+
+/* log a routine: show the exercises, confirm minutes, write one entry */
+function logRoutine(id){
+  const rt=S.routines.find(x=>x.id===id); if(!rt) return;
+  const kg=bodyKg(day), mins=+rt.min||rtAutoMin(rt);
+  openSheet(`<h3>${esc(rt.name)}</h3>
+    <div id="rtRef"></div>
+    <div class="row4">
+      <label class="fld"><span>Minutes today</span><input type="number" id="lgMin" inputmode="numeric" value="${mins}"></label>
+      <label class="fld"><span>Calories (optional)</span><input type="number" id="lgCal" inputmode="numeric" placeholder="auto"></label>
+    </div>
+    <p class="note" id="lgPrev"></p>
+    <button class="primary" id="lgGo">Log ${esc(rt.name)}</button>
+    <button class="ghost" id="lgEdit">Edit this routine</button>
+    <button class="ghost" data-close>Cancel</button>`);
+  $('#rtRef').innerHTML=(rt.ex||[]).map(e=>
+    `<div class="rowline"><span>${esc(e.n)}${e.w?' &middot; '+esc(e.w):''}</span><b>${e.s}&times;${e.r}</b></div>`).join('');
+  const prev=()=>{ const m=+$('#lgMin').value||0, ov=+$('#lgCal').value;
+    $('#lgPrev').innerHTML = ov>0 ? 'Using your number: <b>'+r0(ov)+' cal</b>.'
+      : 'About <b>'+r0(metCal(m,+rt.met||5,kg))+' cal</b> for '+r0(m)+' min at '+r1(bodyLb(day))+' lb.'; };
+  $('#lgMin').oninput=prev; $('#lgCal').oninput=prev; prev();
+  $('#lgGo').onclick=()=>{
+    const m=+$('#lgMin').value||0, ov=+$('#lgCal').value;
+    if(!(m>0)) return;
+    dayAct(day).push({id:uid(), t:'work', name:rt.name,
+      detail:r0(m)+' min &middot; '+rtSets(rt)+' sets'+(ov>0?' &middot; your number':''),
+      min:m, met:+rt.met||5, cal:r0(ov>0?ov:metCal(m,+rt.met||5,kg))});
+    save(); closeSheet(); renderMove();
+  };
+  $('#lgEdit').onclick=()=>editRoutine(id);
+}
+
+function renderRoutines(){
+  const el=$('#routineList'); if(!el) return;
+  const kg=bodyKg(day);
+  el.innerHTML = S.routines.length
+    ? S.routines.map(rt=>`<div class="item"><div class="t"><b data-rtedit="${rt.id}">${esc(rt.name)}</b>
+        <small>${(rt.ex||[]).length} exercises &middot; ${rtSets(rt)} sets &middot; ${r0(+rt.min||rtAutoMin(rt))} min &middot; ~${r0(rtCal(rt,kg))} cal</small></div>
+        <button class="x" data-rtlog="${rt.id}" style="color:var(--cal);font-size:1.3rem" aria-label="Log ${esc(rt.name)}">+</button>
+        <button class="x" data-rtdel="${rt.id}" aria-label="Delete ${esc(rt.name)}">&times;</button></div>`).join('')
+    : '<div class="empty">No routines yet. Tap New routine and enter the exercises for a day you repeat.</div>';
+  $$('#routineList [data-rtlog]').forEach(b=>b.onclick=()=>logRoutine(b.dataset.rtlog));
+  $$('#routineList [data-rtedit]').forEach(b=>b.onclick=()=>editRoutine(b.dataset.rtedit));
+  $$('#routineList [data-rtdel]').forEach(b=>b.onclick=()=>{
+    S.routines=S.routines.filter(x=>x.id!==b.dataset.rtdel); save(); renderMove();
+  });
+}
+
 function renderMove(){
   const k=day, kg=bodyKg(k);
   const eaten=dayTotals(k).cal, sb=sessionBurn(k), stb=stepBurn(k), burned=sb+stb, net=eaten-burned;
@@ -1580,6 +1724,7 @@ function renderMove(){
   if(!$('#tMin').value) $('#tMin').value=u.min||'';
   if(!$('#tMph').value) $('#tMph').value=u.mph||'';
   if(!$('#tInc').value && u.inc) $('#tInc').value=u.inc;
+  renderRoutines();
   previewTread(); previewWork();
 }
 function previewTread(){
@@ -1603,6 +1748,7 @@ function previewWork(){
              : 'Pick a type and minutes for an estimate.');
 }
 function wireMove(){
+  $('#newRoutine').onclick=newRoutine;
   ['#tMin','#tMph','#tInc','#tCal'].forEach(id=>$(id).addEventListener('input',previewTread));
   ['#wMin','#wCal'].forEach(id=>$(id).addEventListener('input',previewWork));
   $('#wType').addEventListener('change',previewWork);
