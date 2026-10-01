@@ -541,7 +541,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-02.2';
+const APP_VERSION='2026-10-02.3';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -1979,9 +1979,14 @@ function dayTotals(k){ return (S.days[k]||[]).reduce((a,e)=>({cal:a.cal+e.cal,p:
 
 /* A day is scored only on what the app actually knows: calories against target,
    protein against target, and how close carbs and fat land to theirs. */
-/* Share of the protein target that makes a low-calorie day count as deliberate
-   rather than a shortfall. */
+/* Protein credit on a low-calorie day. At or above PRO_FLOOR of the protein
+   target the deficit costs nothing; at or below PRO_FADE it costs full price;
+   in between the credit fades, so missing by a gram is not a cliff. */
 const PRO_FLOOR=0.80;
+const PRO_FADE=0.50;
+/* The single over-target line. Both the miss rule and the calorie score use it,
+   so a day can no longer be flagged red while still scoring 100 on calories. */
+const OVER_GRACE=1.01;
 function dayScore(k){
   const t=dayTotals(k), g=S.goals;
   const logged=(S.days[k]||[]).length>0 && t.cal>=300;
@@ -1991,21 +1996,23 @@ function dayScore(k){
      long as protein still lands. Hit PRO_FLOOR of the protein target and the
      calorie component stops docking you for being low. Going OVER is still
      penalised exactly as before. */
-  const proOK = g.p ? (t.p >= g.p*PRO_FLOOR) : false;
-  const lowOK = rc<0.90 && proOK;
+  const pShare = g.p ? t.p/g.p : 0;
+  /* How much of the low-calorie credit this day has earned, 0 to 1. */
+  const credit = clamp((pShare-PRO_FADE)/(PRO_FLOOR-PRO_FADE), 0, 1);
+  const lowOK = rc<0.90 && pShare>=PRO_FLOOR;
   let calS;
-  if(rc<=1.05 && rc>=0.90) calS=100;
-  else if(rc>1.05) calS=clamp(100-(rc-1.05)*400,0,100);
-  else calS = proOK ? 100 : clamp(100-(0.90-rc)*260,0,100);
-  const proS=g.p? clamp(t.p/g.p*100,0,100) : 0;
+  if(rc>OVER_GRACE)   calS=clamp(100-(rc-OVER_GRACE)*400,0,100);
+  else if(rc>=0.90)   calS=100;
+  else { const pen=clamp(100-(0.90-rc)*260,0,100); calS=pen+credit*(100-pen); }
+  const proS=g.p? clamp(pShare*100,0,100) : 0;
   const near=(v,tg)=> tg? clamp(100-Math.abs(v-tg)/tg*140,0,100) : 0;
   /* On an intentionally low day, judging carbs and fat against full-day targets
-     is meaningless: they cannot be hit on half the calories. Scale them to what
-     was actually eaten so balance still measures something real. */
-  const bScale = lowOK ? Math.max(rc,0.3) : 1;
+     is meaningless: they cannot be hit on half the calories. Scale them toward
+     what was actually eaten, by the same earned credit. */
+  const bScale = rc<0.90 ? 1+credit*(Math.max(rc,0.3)-1) : 1;
   const balS=(near(t.c,g.c*bScale)+near(t.f,g.f*bScale))/2;
   return {k,logged:true,total:Math.round(0.45*calS+0.35*proS+0.20*balS),
-          calS:Math.round(calS),proS:Math.round(proS),balS:Math.round(balS),lowOK,proOK,t};
+          calS:Math.round(calS),proS:Math.round(proS),balS:Math.round(balS),lowOK,credit,t};
 }
 /* A clean day is logged, scored at least 70, and not a miss. Short sleep or
    going over target disqualifies it, so this agrees with the level system
@@ -2144,7 +2151,6 @@ $('#newRecipe').onclick=newRecipe;
    and only count once they are finished. Bad weeks cost you nothing, they
    just do not advance you. */
 const MISS_ALLOWED=2;
-const OVER_GRACE=1.02;          // 2% over target still counts as a hit
 const MAX_BREAK=3;              // more than this many misses in a row costs a level
 const RANKS=['Novice','Adept','Fighter','Warrior','Veteran','Champion','Master','Ascendant','Paragon','Apex'];
 
@@ -2317,7 +2323,7 @@ function calBars(keys){
     const t=dayTotals(k), s=dayScore(k);
     const x=i*bw+(bw-iw)/2;
     const hgt=(t.cal/maxV)*plotH, y=padT+plotH-hgt;
-    const col=!s.logged?'var(--line)':(t.cal>g.cal*1.05?'var(--fat)':'var(--pro)');
+    const col=!s.logged?'var(--line)':(t.cal>g.cal*OVER_GRACE?'var(--fat)':'var(--pro)');
     bars+='<rect class="bar" data-k="'+k+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+iw.toFixed(1)+
           '" height="'+Math.max(hgt,2).toFixed(1)+'" rx="4" fill="'+col+'"/>';
     if(showVals && s.logged)
@@ -2466,14 +2472,14 @@ function renderProgress(){
     stat('Clean days', cleanDays+' / '+n, loggedDays+' of '+elapsed+' days logged', cleanDays>=elapsed*0.7?'good':(cleanDays>=elapsed*0.4?'warn':'bad'))+
     stat('Week streak', streak+(streak===1?' week':' weeks'), streak>0?'clean weeks in a row':'clear a week to start one', streak>=2?'good':'neutral')+
     stat('Levels lost', li.lost, li.lost?li.lost+(li.lost===1?' break of ':' breaks of ')+'over '+MAX_BREAK+' days':'no break over '+MAX_BREAK+' days', li.lost?'bad':'good')+
-    stat('Avg calories', loggedDays?r0(avgCal):'--', 'target '+r0(S.goals.cal), !loggedDays?'neutral':(avgCal>S.goals.cal*1.05?'bad':'good'))+
+    stat('Avg calories', loggedDays?r0(avgCal):'--', 'target '+r0(S.goals.cal), !loggedDays?'neutral':(avgCal>S.goals.cal*OVER_GRACE?'bad':'good'))+
     stat(deficit>=0?'Deficit':'Surplus', r0(Math.abs(deficit))+' cal',
          (deficit>=0?'about '+r1(projLb)+' lb of loss':'about '+r1(Math.abs(projLb))+' lb gained')+(burnWin>0?', workouts included':''),
          deficit>=0?'good':'bad')+
     stat('Burned', r0(burnWin)+' cal', 'sessions and steps together', burnWin>0?'good':'neutral')+
     stat('Steps', stepWin.toLocaleString(), stepDays?'over '+stepDays+(stepDays===1?' day':' days'):'none logged', stepWin>=S.profile.usual.steps*Math.max(1,stepDays)?'good':'neutral');
 
-  $('#cardCals').innerHTML='<h3>Calories vs target</h3><div class="sub">Dashed line is your '+r0(S.goals.cal)+' cal target. Green is at or under it, red is over, grey days were not logged.</div>'+calBars(keys);
+  $('#cardCals').innerHTML='<h3>Calories vs target</h3><div class="sub">Dashed line is your '+r0(S.goals.cal)+' cal target. Green is at or under it, red is more than '+r0(S.goals.cal*OVER_GRACE)+', grey days were not logged.</div>'+calBars(keys);
 
   let wbody='<h3>Weight</h3><div class="sub">'+
     (measured!==null ? (measured<=0?'Down ':'Up ')+r1(Math.abs(measured))+' lb over this period' : 'Log your weight to track the real result against the projection')+
@@ -2484,7 +2490,7 @@ function renderProgress(){
 
   let bbody;
   if(progMode==='week'){
-    bbody='<h3>Day by day</h3><div class="sub">Monday to Sunday. Score blends calories (45%), protein (35%) and how close carbs and fat land (20%). Eating under target does not cost you anything as long as protein reaches '+r0(S.goals.p*PRO_FLOOR)+' g, which is '+Math.round(PRO_FLOOR*100)+'% of your '+r0(S.goals.p)+' g target. A day is a miss if you went over target, never logged, or slept under '+r1(S.profile.sleepMin)+' h.</div>';
+    bbody='<h3>Day by day</h3><div class="sub">Monday to Sunday. Score blends calories (45%), protein (35%) and how close carbs and fat land (20%). Eating under target costs you nothing once protein reaches '+r0(S.goals.p*PRO_FLOOR)+' g ('+Math.round(PRO_FLOOR*100)+'% of your '+r0(S.goals.p)+' g target), and the credit fades out below that down to '+r0(S.goals.p*PRO_FADE)+' g. A day is a miss over '+r0(S.goals.cal*OVER_GRACE)+' cal, never logged, or slept under '+r1(S.profile.sleepMin)+' h.</div>';
     keys.filter(k=>k<=todayK).forEach(k=>{ const s=dayScore(k), m=dayMiss(k);
       const tag = m.miss ? '<b class="bad">'+esc(m.why)+'</b>'
                          : (s.logged?'<b class="'+(isClean(s)?'good':(s.total>=45?'warn':'bad'))+'">'+s.total+'</b>':'<b style="color:var(--dim)">not logged</b>');
