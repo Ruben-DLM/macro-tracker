@@ -86,15 +86,15 @@ nav button.on svg{stroke:var(--cal)}
 .sheet{position:fixed; inset:0; z-index:40; display:none}
 .sheet.open{display:block}
 .sheet .scrim{position:absolute; inset:0; background:rgba(6,10,14,.72)}
-.sheet .card{position:absolute; left:0; right:0; bottom:0; max-height:92vh; overflow:auto; background:var(--ink);
+.sheet .card{position:absolute; left:0; right:0; bottom:0; max-height:88%; overflow:auto; background:var(--ink);
   border-top:1px solid var(--line); border-radius:22px 22px 0 0; padding:0 0 calc(24px + env(safe-area-inset-bottom));
   animation:up .22s ease; will-change:transform; overscroll-behavior:contain}
 .sheet .card.drag{animation:none; transition:none}
 .sheetTop{position:sticky; top:0; z-index:3; background:var(--ink); padding:7px 0 5px;
   border-radius:22px 22px 0 0; touch-action:none; cursor:grab}
-.sheetX{position:absolute; top:5px; right:12px; width:36px; height:36px; border-radius:50%;
+.sheetX{position:absolute; top:3px; right:10px; width:40px; height:40px; border-radius:50%;
   background:var(--panel); border:1px solid var(--line); display:grid; place-items:center; padding:0}
-.sheetX svg{width:15px; height:15px; stroke:var(--dim); fill:none; stroke-width:2.3; stroke-linecap:round}
+.sheetX svg{width:17px; height:17px; stroke:var(--text); fill:none; stroke-width:2.3; stroke-linecap:round}
 @keyframes up{from{transform:translateY(14px); opacity:.4}to{transform:none; opacity:1}}
 @media (prefers-reduced-motion:reduce){.sheet .card{animation:none} .track>i,.mac .bar>i{transition:none}}
 .grab{width:44px; height:5px; border-radius:3px; background:var(--line); margin:4px auto 9px}
@@ -157,10 +157,13 @@ input:focus,select:focus{border-color:var(--cal)}
 .chart .lbl{fill:var(--text); font-size:10px; font-weight:600; font-family:inherit}
 .chart .vlbl{font-size:9.5px; font-weight:600; font-family:inherit; letter-spacing:-.02em}
 .hm{display:grid; grid-template-columns:repeat(7,1fr); gap:4px}
-.hm i{aspect-ratio:1; border-radius:4px; display:flex; align-items:center; justify-content:center;
-  border:1px solid rgba(255,255,255,.04); font-style:normal; font-size:.6rem; font-weight:600;
+.hm i{aspect-ratio:1; border-radius:4px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:2px; overflow:hidden;
+  border:1px solid rgba(255,255,255,.04); font-style:normal;
   line-height:1; letter-spacing:-.03em; color:rgba(255,255,255,.93)}
-.hm i.off{color:transparent}
+.hm i b{font-size:.53rem; font-weight:600; opacity:.7}
+.hm i em{font-style:normal; font-size:.6rem; font-weight:700}
+.hm i.off b{opacity:1}
 .hmhead{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:6px}
 .hmhead span{text-align:center; color:var(--dim); font-size:.65rem; text-transform:uppercase}
 .key{display:flex; align-items:center; gap:7px; margin-top:12px; color:var(--dim); font-size:.72rem; flex-wrap:wrap}
@@ -176,6 +179,9 @@ input:focus,select:focus{border-color:var(--cal)}
 .updbar.on{display:flex}
 .updbar button{margin-left:auto; background:#1A1206; color:var(--cal); padding:7px 13px; border-radius:9px; font-weight:600; font-size:.8rem}
 .hide{display:none !important}
+/* Foods, Targets and Progress hide the date header, so they must carry the
+   status-bar inset themselves or their first row sits under the notch. */
+#viewFoods,#viewGoals,#viewProgress{padding-top:calc(env(safe-area-inset-top) + 14px)}
 </style>
 </head>
 <body>
@@ -535,7 +541,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-01.9';
+const APP_VERSION='2026-10-02.1';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -639,8 +645,32 @@ $$('nav button').forEach(b=>b.onclick=()=>{
 /* ---------- sheet plumbing ---------- */
 const sheetCard = () => $('#sheet').querySelector('.card');
 function sheetReset(){ const c=sheetCard(); if(c){ c.classList.remove('drag'); c.style.transform=''; } }
-function openSheet(html){ $('#sheetBody').innerHTML=html; sheetReset(); $('#sheet').classList.add('open'); const c=sheetCard(); if(c) c.scrollTop=0; }
-function closeSheet(){ $('#sheet').classList.remove('open'); sheetReset(); stopScan(); }
+
+/* On a phone the keyboard shrinks the visual viewport but not the layout one,
+   so a fixed sheet keeps its bottom behind the keyboard and appears shoved up
+   the screen with its controls out of reach. Pin the sheet to what is actually
+   visible instead. */
+const vvp = window.visualViewport || null;
+function sheetFit(){
+  const el=$('#sheet');
+  if(!vvp || !el.classList.contains('open')){ el.style.top=''; el.style.height=''; el.style.bottom=''; return; }
+  el.style.top    = vvp.offsetTop + 'px';
+  el.style.height = vvp.height + 'px';
+  el.style.bottom = 'auto';
+}
+if(vvp){ vvp.addEventListener('resize', sheetFit); vvp.addEventListener('scroll', sheetFit); }
+
+function openSheet(html){
+  $('#sheetBody').innerHTML=html; sheetReset();
+  $('#sheet').classList.add('open');
+  const c=sheetCard(); if(c) c.scrollTop=0;
+  sheetFit();
+}
+function closeSheet(){
+  const a=document.activeElement;
+  if(a && a.blur) a.blur();                 // let the keyboard go with the sheet
+  $('#sheet').classList.remove('open'); sheetReset(); stopScan(); sheetFit();
+}
 
 /* swipe the sheet down to dismiss: from the handle, or from anywhere once scrolled to the top */
 (function(){
@@ -656,6 +686,7 @@ function closeSheet(){ $('#sheet').classList.remove('open'); sheetReset(); stopS
       if(e.target.closest('input,textarea,select,button,a,[data-close]')) return;
     }
     y0=yOf(e); dy=0; live=true; c.classList.add('drag');
+    if(onHandle && document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }, {passive:true});
   sheet.addEventListener('touchmove', e=>{
     if(!live||!c) return;
@@ -1951,7 +1982,7 @@ function dayTotals(k){ return (S.days[k]||[]).reduce((a,e)=>({cal:a.cal+e.cal,p:
 function dayScore(k){
   const t=dayTotals(k), g=S.goals;
   const logged=(S.days[k]||[]).length>0 && t.cal>=300;
-  if(!logged) return {logged:false,total:0,calS:0,proS:0,balS:0,t};
+  if(!logged) return {k,logged:false,total:0,calS:0,proS:0,balS:0,t};
   const rc=g.cal? t.cal/g.cal : 1;
   let calS;
   if(rc<=1.05 && rc>=0.90) calS=100;
@@ -1960,10 +1991,13 @@ function dayScore(k){
   const proS=g.p? clamp(t.p/g.p*100,0,100) : 0;
   const near=(v,tg)=> tg? clamp(100-Math.abs(v-tg)/tg*140,0,100) : 0;
   const balS=(near(t.c,g.c)+near(t.f,g.f))/2;
-  return {logged:true,total:Math.round(0.45*calS+0.35*proS+0.20*balS),
+  return {k,logged:true,total:Math.round(0.45*calS+0.35*proS+0.20*balS),
           calS:Math.round(calS),proS:Math.round(proS),balS:Math.round(balS),t};
 }
-const isClean=s=>s.logged&&s.total>=70;
+/* A clean day is logged, scored at least 70, and not a miss. Short sleep or
+   going over target disqualifies it, so this agrees with the level system
+   and with the colour of the square in the month grid. */
+const isClean=s=>s.logged&&s.total>=70&&!dayMiss(s.k).miss;
 function tdee(){ return S.profile.tdee>0 ? S.profile.tdee : S.goals.cal+Math.round(S.profile.rate*3500/7); }
 function dayDeficit(k){ const s=dayScore(k); return s.logged? tdee()+dayBurn(k)-s.t.cal : 0; }
 
@@ -2321,31 +2355,32 @@ function weightChart(days){
    Grey means nothing was logged. Red means the day counted as a miss.
    Otherwise green, getting lighter as the day scores better. Each square
    carries the calories for that day. */
-const HEAT=['#1E2733','#1F4A3C','#2A6B54','#388F6E','#4AB68B','#5AD1A5'];
-const MISS_RED='#9B2F3A';
-const heatColor=s=>s<=0?HEAT[0]:HEAT[Math.min(5,1+Math.floor(s/21))];
+const EMPTY='#1E2733';                                   // nothing logged
+const MISS_RED='#9B2F3A';                                // a miss, by the day rule
+const UNDER='#8A6A22';                                   // logged, no miss, under a clean score
+const CLEAN=['#2A6B54','#388F6E','#4AB68B','#5AD1A5'];   // clean, brighter as the score climbs
+const dayNum=k=>+k.slice(8);
 function cellPaint(k){
   const s=dayScore(k);
-  if(!s.logged) return {bg:HEAT[0], off:true, txt:'', fg:''};
-  const m=dayMiss(k);
-  if(m.miss) return {bg:MISS_RED, off:false, txt:r0(s.t.cal), fg:'#FFF'};
-  const idx=Math.min(5,1+Math.floor(s.total/21));
+  if(!s.logged) return {bg:EMPTY, off:true, txt:'', fg:'var(--dim)'};
+  if(dayMiss(k).miss) return {bg:MISS_RED, off:false, txt:r0(s.t.cal), fg:'#FFF'};
+  if(s.total<70)      return {bg:UNDER,    off:false, txt:r0(s.t.cal), fg:'#FFF'};
+  const i=Math.min(3,Math.floor((s.total-70)/8));
   /* the brightest greens need dark text to stay readable */
-  return {bg:HEAT[idx], off:false, txt:r0(s.t.cal), fg: idx>=4 ? '#08121A' : 'rgba(255,255,255,.95)'};
+  return {bg:CLEAN[i], off:false, txt:r0(s.t.cal), fg: i>=2 ? '#08121A' : 'rgba(255,255,255,.95)'};
 }
 function heatmap(keys){
   let cells='';
   keys.forEach(k=>{
     const c=cellPaint(k);
     cells+='<i class="hcell'+(c.off?' off':'')+'" data-k="'+k+'" style="background:'+c.bg+
-           (c.fg?';color:'+c.fg:'')+'">'+c.txt+'</i>';
+           ';color:'+c.fg+'"><b>'+dayNum(k)+'</b>'+(c.txt?'<em>'+c.txt+'</em>':'')+'</i>';
   });
   const head=['M','T','W','T','F','S','S'].map(d=>'<span>'+d+'</span>').join('');
-  let key='<div class="key"><i style="background:'+HEAT[0]+'"></i><span>Not logged</span>'+
+  let key='<div class="key"><i style="background:'+EMPTY+'"></i><span>Not logged</span>'+
           '<i style="background:'+MISS_RED+'"></i><span>Miss</span>'+
-          '<span>Worse</span>';
-  HEAT.slice(1).forEach(c=>{ key+='<i style="background:'+c+'"></i>'; });
-  key+='<span>Better</span></div>';
+          '<i style="background:'+UNDER+'"></i><span>Under par</span>'+
+          '<i style="background:'+CLEAN[0]+'"></i><i style="background:'+CLEAN[3]+'"></i><span>Clean</span></div>';
   return '<div class="hmhead">'+head+'</div><div class="hm">'+cells+'</div>'+key;
 }
 
@@ -2444,7 +2479,7 @@ function renderProgress(){
         ((S.sleep[k]||0)>0?' · '+r1(S.sleep[k])+'h':'')+'</span>'+tag+'</div>';
     });
   } else {
-    bbody='<h3>The month</h3><div class="sub">Each square is a day, showing the calories you ate. Red is a miss, grey was never logged, and brighter green means a better score.</div>'+heatmap(alignedMonthKeys());
+    bbody='<h3>The month</h3><div class="sub">Each square is a day, with the date and the calories you ate. Green is a clean day, amber means logged but under a 70 score, red is a miss, grey was never logged.</div>'+heatmap(alignedMonthKeys());
   }
   $('#cardBreak').innerHTML=bbody;
   wireProgTips();
