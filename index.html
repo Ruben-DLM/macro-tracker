@@ -541,7 +541,7 @@ async function bootRestore(){
 
 /* Self-update. Without this the only way to get a new build was a hard refresh
    or re-adding the home screen icon, and on iOS both of those wipe local storage. */
-const APP_VERSION='2026-10-02.3';
+const APP_VERSION='2026-10-02.4';
 let updSeen=false;
 async function checkUpdate(){
   if(updSeen) return;
@@ -2339,21 +2339,35 @@ function calBars(keys){
 }
 
 /* ---- weight over time ---- */
+/* Average of every weigh-in inside a trailing calendar window ending on a date.
+   By date, not by count, so gaps in logging do not stretch the window. */
+function wAvg(endK, days){
+  const end=new Date(endK+'T12:00').getTime(), start=end-(days-1)*DAYMS;
+  const ks=Object.keys(S.weights).filter(k=>{
+    const t=new Date(k+'T12:00').getTime(); return t>=start && t<=end; });
+  if(!ks.length) return null;
+  return {avg: ks.reduce((a,k)=>a+(+S.weights[k]),0)/ks.length, n:ks.length};
+}
 function weightChart(days){
   const cutoff=keyBack(days-1);
   const pts=Object.keys(S.weights).sort().filter(k=>k>=cutoff).map(k=>({k,w:+S.weights[k]}));
   if(pts.length<2) return '<p class="note">Log your weight on at least two days and the trend line shows up here.</p>';
+  /* A single weigh-in swings 2 to 3 lb on water and gut content alone, so the
+     7-day average is the line that means anything. Raw readings stay visible
+     but faint. */
+  const tr=pts.map(p=>{ const a=wAvg(p.k,7); return {k:p.k, w:a?a.avg:p.w}; });
   const VB=320,H=140,padT=14,padB=18,padL=30;
-  const ws=pts.map(p=>p.w).concat(S.profile.goalW>0?[S.profile.goalW]:[]);
+  const ws=pts.map(p=>p.w).concat(tr.map(p=>p.w)).concat(S.profile.goalW>0?[S.profile.goalW]:[]);
   let lo=Math.min.apply(null,ws), hi=Math.max.apply(null,ws);
   if(hi-lo<2){ lo-=1; hi+=1; }
   const pad=(hi-lo)*0.15; lo-=pad; hi+=pad;
   const plotH=H-padT-padB, plotW=VB-padL-6;
   const X=i=>padL+(pts.length===1?plotW/2:(i/(pts.length-1))*plotW);
   const Y=w=>padT+plotH-((w-lo)/(hi-lo))*plotH;
-  let d='',dots='';
+  let d='',td='',dots='';
   pts.forEach((p,i)=>{ d+=(i?' L':'M')+X(i).toFixed(1)+' '+Y(p.w).toFixed(1);
-    dots+='<circle class="wdot" data-k="'+p.k+'" cx="'+X(i).toFixed(1)+'" cy="'+Y(p.w).toFixed(1)+'" r="4.5" fill="var(--carb)" stroke="var(--panel)" stroke-width="2"/>'; });
+    dots+='<circle class="wdot" data-k="'+p.k+'" cx="'+X(i).toFixed(1)+'" cy="'+Y(p.w).toFixed(1)+'" r="3" fill="var(--dim)" stroke="var(--panel)" stroke-width="1.5"/>'; });
+  tr.forEach((p,i)=>{ td+=(i?' L':'M')+X(i).toFixed(1)+' '+Y(p.w).toFixed(1); });
   let goal='';
   if(S.profile.goalW>0 && S.profile.goalW>=lo && S.profile.goalW<=hi){
     const gy=Y(S.profile.goalW);
@@ -2363,8 +2377,9 @@ function weightChart(days){
   return '<svg class="chart" viewBox="0 0 '+VB+' '+H+'" role="img" aria-label="Weight over time">'+
     '<text class="axis" x="0" y="'+(padT+4)+'">'+r1(hi)+'</text>'+
     '<text class="axis" x="0" y="'+(padT+plotH)+'">'+r1(lo)+'</text>'+goal+
-    '<path d="'+d+'" fill="none" stroke="var(--carb)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
+    '<path d="'+d+'" fill="none" stroke="var(--line)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'+
     dots+
+    '<path d="'+td+'" fill="none" stroke="var(--carb)" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'+
     '<text class="axis" x="'+padL+'" y="'+(H-4)+'">'+shortDate(pts[0].k)+'</text>'+
     '<text class="axis" x="'+VB+'" y="'+(H-4)+'" text-anchor="end">'+shortDate(pts[pts.length-1].k)+'</text>'+
     '</svg>';
@@ -2481,8 +2496,23 @@ function renderProgress(){
 
   $('#cardCals').innerHTML='<h3>Calories vs target</h3><div class="sub">Dashed line is your '+r0(S.goals.cal)+' cal target. Green is at or under it, red is more than '+r0(S.goals.cal*OVER_GRACE)+', grey days were not logged.</div>'+calBars(keys);
 
-  let wbody='<h3>Weight</h3><div class="sub">'+
-    (measured!==null ? (measured<=0?'Down ':'Up ')+r1(Math.abs(measured))+' lb over this period' : 'Log your weight to track the real result against the projection')+
+  /* Week over week on the averages, which is the only weight comparison worth
+     making: two single readings differ mostly by water. */
+  const w7=wAvg(todayK,7), wPrev=wAvg(iso(new Date(Date.now()-7*DAYMS)),7);
+  let wsub;
+  if(w7 && wPrev){
+    const dw=w7.avg-wPrev.avg;
+    wsub='7-day average <b>'+r1(w7.avg)+' lb</b>, '+(dw<=0?'down ':'up ')+r1(Math.abs(dw))+
+         ' on the week before. Faint line is each weigh-in, solid line is the average.';
+  } else if(w7){
+    wsub='7-day average <b>'+r1(w7.avg)+' lb</b> from '+w7.n+(w7.n===1?' weigh-in':' weigh-ins')+
+         '. Keep logging and the week-over-week change shows up here.';
+  } else {
+    wsub= measured!==null
+      ? (measured<=0?'Down ':'Up ')+r1(Math.abs(measured))+' lb over this period'
+      : 'Log your weight to track the real result against the projection';
+  }
+  let wbody='<h3>Weight</h3><div class="sub">'+wsub+
     '</div>'+weightChart(progMode==='week'?21:60)+
     '<button class="ghost" id="logW">Log weight</button>';
   $('#cardWeight').innerHTML=wbody;
@@ -2512,8 +2542,9 @@ function wireProgTips(){
     showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+(s.logged?r0(s.t.cal)+' cal · '+r0(s.t.p)+'g protein · score '+s.total+(s.lowOK?' · low day, protein hit':''):'not logged'));
   });
   $$('#viewProgress .wdot').forEach(el=>el.onclick=ev=>{
-    const k=el.dataset.k, r=el.getBoundingClientRect();
-    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+r1(S.weights[k])+' lb');
+    const k=el.dataset.k, r=el.getBoundingClientRect(), a=wAvg(k,7);
+    showTip(r.left+r.width/2, r.top, '<b>'+shortDate(k)+'</b>'+r1(S.weights[k])+' lb'+
+      (a&&a.n>1 ? ' · 7-day avg '+r1(a.avg) : ''));
   });
   $$('#viewProgress .hcell').forEach(el=>el.onclick=ev=>{
     const k=el.dataset.k, s=dayScore(k), m=dayMiss(k), r=el.getBoundingClientRect();
